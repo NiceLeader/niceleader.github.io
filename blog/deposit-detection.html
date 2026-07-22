@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Why Your Deposit Detection Misses Money - Maciej Lewandowski</title>
-<meta name="description" content="Field notes from building deposit detection for custody platforms: proxy contracts, fee-on-transfer tokens, reorgs, UTXO edge cases and Solana token accounts - and why reconciliation is the only real fix.">
+<meta name="description" content="Field notes from custody engineering: the deposit paths that silently lose money on EVM, Bitcoin and Solana, and why reconciliation is the only real fix.">
 <link rel="canonical" href="https://maciejlewandowski.dev/blog/deposit-detection.html">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Why Your Deposit Detection Misses Money">
@@ -120,8 +120,8 @@ topic. So far, so standard. The edge cases are where deposits go missing:</p>
 <p>A deposit is not a fact when it appears in a block. It is a probability that increases
 with depth, and every chain prices that differently. Bitcoin finality is probabilistic
 (the classic 6 confirmations is a policy choice, not physics). Ethereum has explicit
-finalized checkpoints. Solana has commitment levels. Polygon and other high-throughput
-chains reorg shallowly all the time as a matter of routine.</p>
+finalized checkpoints. Solana has commitment levels. And chains with fast blocks and
+probabilistic finality reorg shallowly as a matter of routine, not as a black-swan event.</p>
 
 <p>Two rules kept us honest:</p>
 
@@ -161,7 +161,8 @@ lessons from the UTXO side:</p>
 <h2>Solana: the deposit does not go where you think</h2>
 
 <p>SPL token deposits do not credit the client's main address. They credit an Associated
-Token Account, a separate address derived from (owner, mint). The deposit transaction may
+Token Account, a separate address derived from the owner, the token program and the mint.
+The deposit transaction may
 even <em>create</em> that account on the fly. A scanner built on EVM assumptions, watching
 the owner address for incoming value, sees nothing at all. You watch token accounts, you
 resolve their owners, and you pick a commitment level (<code>confirmed</code> vs
