@@ -1,6 +1,6 @@
-# maciejlewandowski.dev
+﻿# maciejlewandowski.dev
 
-Personal site of **Maciej Lewandowski** — Senior Blockchain Engineer.
+Personal site of **Maciej Lewandowski** - Senior Blockchain Engineer.
 
 Custody & wallet infrastructure · Solana · EVM · Bitcoin · Enterprise DLT.
 
