@@ -115,6 +115,36 @@ topic. So far, so standard. The edge cases are where deposits go missing:</p>
   Everyone knows. Every integration still gets bitten once.</li>
 </ul>
 
+<div style="overflow-x:auto;margin:8px 0 26px">
+<svg viewBox="0 0 760 170" style="min-width:680px;width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Deposit pipeline: blocks scanned, pending balance, confirmed credit, with reorg path back to pending">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/>
+    </marker>
+  </defs>
+  <rect x="8" y="40" width="110" height="44" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="63" y="66" text-anchor="middle" style="fill:var(--fg)">chain blocks</text>
+  <line x1="118" y1="62" x2="168" y2="62" style="stroke:var(--fg2)" marker-end="url(#ar)"/>
+  <rect x="170" y="40" width="150" height="44" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="245" y="59" text-anchor="middle" style="fill:var(--fg)">scanner</text>
+  <text x="245" y="75" text-anchor="middle" style="fill:var(--fg2)">logs + traces</text>
+  <line x1="320" y1="62" x2="370" y2="62" style="stroke:var(--fg2)" marker-end="url(#ar)"/>
+  <rect x="372" y="40" width="140" height="44" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="442" y="59" text-anchor="middle" style="fill:var(--fg)">PENDING</text>
+  <text x="442" y="75" text-anchor="middle" style="fill:var(--fg2)">visible, not spendable</text>
+  <line x1="512" y1="62" x2="586" y2="62" style="stroke:var(--fg2)" marker-end="url(#ar)"/>
+  <text x="549" y="52" text-anchor="middle" style="fill:var(--fg2)">N conf</text>
+  <rect x="588" y="40" width="140" height="44" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="658" y="59" text-anchor="middle" style="fill:var(--fg)">CONFIRMED</text>
+  <text x="658" y="75" text-anchor="middle" style="fill:var(--fg2)">credited</text>
+  <path d="M 658 84 C 658 135, 442 135, 442 86" fill="none" style="stroke:var(--accent)" stroke-dasharray="5 4" marker-end="url(#ar2)"/>
+  <text x="550" y="146" text-anchor="middle" style="fill:var(--accent)">reorg: walk it back + compensating entry</text>
+</svg>
+</div>
+
 <h2>Confirmations: crediting is a promise you might have to break</h2>
 
 <p>A deposit is not a fact when it appears in a block. It is a probability that increases

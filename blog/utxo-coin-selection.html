@@ -88,6 +88,41 @@ change output for the remainder, and accept that your choice just changed the sh
 your wallet for every future withdrawal. Greedy answers to this create three distinct
 production problems: fees, dust, and privacy.</p>
 
+<div style="overflow-x:auto;margin:8px 0 26px">
+<svg viewBox="0 0 780 240" style="min-width:700px;width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Coin selection: UTXO set with dust and reserved coins, selected inputs building a transaction with recipient output, fresh change and fee">
+  <defs>
+    <marker id="uar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+  </defs>
+  <text x="14" y="26" style="fill:var(--fg2)">UTXO set (your "balance")</text>
+  <rect x="14" y="40" width="96" height="34" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="62" y="61" text-anchor="middle" style="fill:var(--fg)">1.20 ✓</text>
+  <rect x="14" y="82" width="96" height="34" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="62" y="103" text-anchor="middle" style="fill:var(--fg)">0.30 ✓</text>
+  <rect x="14" y="124" width="96" height="34" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="4 3"/>
+  <text x="62" y="145" text-anchor="middle" style="fill:var(--fg2)">0.008 dust</text>
+  <rect x="14" y="166" width="96" height="34" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="4 3"/>
+  <text x="62" y="187" text-anchor="middle" style="fill:var(--fg2)">0.50 reserved</text>
+  <line x1="110" y1="57" x2="250" y2="95" style="stroke:var(--fg2)" marker-end="url(#uar)"/>
+  <line x1="110" y1="99" x2="250" y2="105" style="stroke:var(--fg2)" marker-end="url(#uar)"/>
+  <rect x="254" y="62" width="200" height="86" rx="10" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="354" y="88" text-anchor="middle" style="fill:var(--fg)">transaction</text>
+  <text x="354" y="108" text-anchor="middle" style="fill:var(--fg2)">inputs: 1.20 + 0.30</text>
+  <text x="354" y="128" text-anchor="middle" style="fill:var(--fg2)">withdraw 1.40</text>
+  <line x1="454" y1="84" x2="580" y2="60" style="stroke:var(--fg2)" marker-end="url(#uar)"/>
+  <line x1="454" y1="105" x2="580" y2="118" style="stroke:var(--fg2)" marker-end="url(#uar)"/>
+  <line x1="454" y1="126" x2="580" y2="176" style="stroke:var(--fg2)" marker-end="url(#uar)"/>
+  <rect x="584" y="40" width="182" height="36" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="675" y="62" text-anchor="middle" style="fill:var(--fg)">1.400 &rarr; recipient</text>
+  <rect x="584" y="100" width="182" height="36" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="675" y="122" text-anchor="middle" style="fill:var(--fg)">0.098 &rarr; fresh change</text>
+  <rect x="584" y="160" width="182" height="36" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="4 3"/>
+  <text x="675" y="182" text-anchor="middle" style="fill:var(--fg2)">0.002 &rarr; fee</text>
+  <text x="390" y="222" text-anchor="middle" style="fill:var(--fg2)">dust: excluded &middot; reserved: held by another in-flight withdrawal</text>
+</svg>
+</div>
+
 <h2>Fees: inputs are the expensive part</h2>
 
 <ul>
