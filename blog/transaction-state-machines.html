@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transaction State Machines for Multi-Chain Custody - Maciej Lewandowski</title>
+<meta name="description" content="Broadcast is not done, confirmed is not final, and retries are where money gets lost. Designing transaction state machines that survive real chains.">
+<link rel="canonical" href="https://maciejlewandowski.dev/blog/transaction-state-machines.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Transaction State Machines for Multi-Chain Custody: What Actually Breaks">
+<meta property="og:description" content="Broadcast is not done, confirmed is not final, and retries are where money gets lost.">
+<meta property="og:url" content="https://maciejlewandowski.dev/blog/transaction-state-machines.html">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Transaction State Machines for Multi-Chain Custody: What Actually Breaks",
+  "datePublished": "2026-07-22",
+  "author": { "@type": "Person", "name": "Maciej Lewandowski", "url": "https://maciejlewandowski.dev/" },
+  "publisher": { "@type": "Person", "name": "Maciej Lewandowski" },
+  "mainEntityOfPage": "https://maciejlewandowski.dev/blog/transaction-state-machines.html"
+}
+</script>
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f6f8fa; --fg: #1f2328; --fg2: #59636e;
+  --accent: #0969da; --border: #d1d9e0; --code: #f6f8fa;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --fg: #e6edf3; --fg2: #9198a1;
+    --accent: #58a6ff; --border: #30363d; --code: #161b22;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--fg); line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+nav { padding: 28px 0; }
+nav a { color: var(--fg2); text-decoration: none; font-size: 0.95rem; }
+nav a:hover { color: var(--accent); }
+article { padding: 16px 0 64px; }
+h1 { font-size: 2.1rem; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
+.meta { color: var(--fg2); font-size: 0.92rem; margin-bottom: 36px; }
+h2 { font-size: 1.4rem; margin: 40px 0 14px; letter-spacing: -0.01em; }
+p { margin-bottom: 18px; }
+ul, ol { margin: 0 0 18px 26px; }
+li { margin-bottom: 8px; }
+code {
+  background: var(--code); border: 1px solid var(--border); border-radius: 5px;
+  padding: 2px 6px; font-size: 0.88em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+strong { font-weight: 600; }
+.callout {
+  border-left: 3px solid var(--accent); background: var(--bg2);
+  padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 18px; color: var(--fg);
+}
+footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
+footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav><a href="/">&larr; maciejlewandowski.dev</a></nav>
+
+<article>
+<h1>Transaction State Machines for Multi-Chain Custody: What Actually Breaks</h1>
+<p class="meta">Maciej Lewandowski &middot; July 2026 &middot; Field notes from custody &amp; wallet infrastructure</p>
+
+<p>Every wallet backend has a transaction status column. Very few have a transaction
+state machine. The difference shows up the first time a chain does something the happy
+path did not anticipate, which on real chains is roughly every week.</p>
+
+<p>A status column answers "what is it now". A state machine answers three harder
+questions: which transitions are legal, what triggers them, and what happens when the
+world moves backwards. In custody, where every transition can move client money, those
+questions are the system.</p>
+
+<h2>The states you actually need</h2>
+
+<p>The shape that has survived contact with BTC, EVM chains and Solana looks roughly
+like this:</p>
+
+<p><code>CREATED &rarr; POLICY_APPROVED &rarr; SIGNED &rarr; BROADCAST &rarr; PENDING &rarr;
+CONFIRMED(n) &rarr; FINALIZED</code></p>
+
+<p>with exits to <code>FAILED</code>, <code>REPLACED</code> and <code>EXPIRED</code>,
+and one deliberately uncomfortable arrow: <code>CONFIRMED &rarr; PENDING</code>, for reorgs.
+A few of these deserve defending:</p>
+
+<ul>
+  <li><strong>POLICY_APPROVED is a separate state, before SIGNED.</strong> Policy
+  evaluation (limits, allowlists, quorum) happens before a key is ever touched, and the
+  approval is recorded as its own transition with its own audit entry. If policy and
+  signing are one step, you cannot prove to an auditor which rule approved a transfer,
+  and you cannot fail closed cleanly when the policy engine is down.</li>
+  <li><strong>BROADCAST and PENDING are different states.</strong> Broadcast means "we
+  handed the transaction to a node". Pending means "the network acknowledges it exists".
+  Between the two, transactions get dropped silently: the node was behind, the mempool
+  evicted it for low fees, the RPC provider accepted it and lost it. If your system
+  treats broadcast as success, these transactions simply vanish from your books while
+  the signed bytes still exist and can confirm later. That combination is how you get
+  a withdrawal that pays out twice.</li>
+  <li><strong>CONFIRMED is parameterized, FINALIZED is policy.</strong> Confirmations
+  accumulate differently per chain: depth on Bitcoin, finalized checkpoints on Ethereum,
+  commitment levels on Solana. FINALIZED is where your business logic says "this can
+  never come back". That threshold is a per-chain policy decision that belongs in
+  reviewed configuration, not in an engineer's head.</li>
+  <li><strong>REPLACED is a real state, not an error.</strong> Fee-bumping (RBF on
+  Bitcoin, same-nonce replacement on Ethereum) produces a new transaction that competes
+  with the old one. Both exist until one confirms. Model the pair explicitly, or your
+  monitoring will report a phantom failure every time remediation does its job.</li>
+</ul>
+
+<h2>Backwards transitions, or: reorgs are not exceptional</h2>
+
+<p>The transition everyone forgets is the one that goes backwards. A block containing
+your confirmed transaction can stop being part of the canonical chain. On fast chains
+with probabilistic finality this is routine; on Bitcoin it is rare but priced in; on
+Ethereum it is bounded by the finalized checkpoint. When it happens, the transaction
+must walk back to PENDING, any ledger effect must be reversed with a compensating entry
+(append-only ledgers make this provable, mutable balance columns make it archaeology),
+and someone should be paged.</p>
+
+<div class="callout">
+A state machine with no backwards transitions is a statement of faith that the chain
+will never disagree with your database. The chain will disagree with your database.
+</div>
+
+<h2>Idempotency is the other half of the design</h2>
+
+<p>Most real incidents are not exotic chain behaviour. They are retries. A timeout on
+broadcast, an operator clicking again, a queue redelivering a message. Every one of
+those must be safe, which means:</p>
+
+<ul>
+  <li><strong>Every transition is idempotent.</strong> Applying "mark as broadcast"
+  twice results in one state change and one audit entry, not two.</li>
+  <li><strong>Every externally-triggered action carries an idempotency key.</strong>
+  A withdrawal request that arrives twice, through any path, produces one transaction.
+  The dedup happens at the boundary, on a key the client controls, stored with the
+  transaction itself.</li>
+  <li><strong>Signing is exactly-once by construction.</strong> The signed payload is
+  persisted before broadcast. A retry re-broadcasts the same bytes; it never re-signs.
+  Re-signing on retry is how you end up with two valid competing transactions and, on
+  UTXO chains, a very educational afternoon.</li>
+</ul>
+
+<h2>Where each chain bends the model</h2>
+
+<ul>
+  <li><strong>Ethereum: the nonce queue.</strong> Transactions from one address confirm
+  in nonce order. One underpriced transaction blocks everything behind it, so "stuck"
+  is contagious. The state machine needs a per-account view, not just per-transaction:
+  remediation of transaction N is meaningless if N-1 is the one that is stuck.</li>
+  <li><strong>Solana: transactions expire.</strong> A transaction references a recent
+  blockhash and dies after roughly 150 slots if unconfirmed. EXPIRED is a first-class
+  terminal state, and the retry path builds a new transaction with a fresh blockhash.
+  For offline or slow signing flows, durable nonces exist precisely because signed
+  transactions cannot wait around.</li>
+  <li><strong>Bitcoin: nothing is yours until it confirms.</strong> Mempools are local
+  opinion, eviction is silent, and replacement is a feature. The PENDING state carries
+  an age timer, and remediation (fee-bump or child-pays-for-parent) is a policy-driven
+  transition, not an ops improvisation.</li>
+</ul>
+
+<h2>The audit trail is not a log file</h2>
+
+<p>In a regulated environment, every transition needs: previous state, new state,
+trigger (who or what), timestamp, and the evidence (block hash, node response, policy
+decision id). Stored as data, queryable, immutable. When a client asks why a withdrawal
+took forty minutes, or an auditor asks who approved it, the answer is a query, not a
+grep through application logs that rotated last month.</p>
+
+<h2>What actually breaks: a short list from production</h2>
+
+<ol>
+  <li>Treating broadcast as done. The transaction vanishes from the mempool and from
+  your books at the same time.</li>
+  <li>No REPLACED state. Fee-bumps look like failures; monitoring cries wolf until
+  people stop listening.</li>
+  <li>Re-signing on retry instead of re-broadcasting persisted bytes.</li>
+  <li>Per-transaction thinking on Ethereum, ignoring the nonce queue.</li>
+  <li>No EXPIRED state on Solana; transactions rot in PENDING forever.</li>
+  <li>Crediting on CONFIRMED with one global threshold for every chain.</li>
+  <li>No backwards transition for reorgs, so reconciliation finds the hole weeks later.</li>
+</ol>
+
+<p>None of these are hard to fix on a whiteboard. All of them are expensive to fix
+after the money moved.</p>
+
+</article>
+
+<footer>
+  <p>Maciej Lewandowski &middot; Senior Blockchain Engineer &middot;
+  <a href="/">maciejlewandowski.dev</a> &middot;
+  <a href="https://www.linkedin.com/in/maciej-lewandowski-76b270207/">LinkedIn</a> &middot;
+  <a href="https://github.com/NiceLeader">GitHub</a></p>
+</footer>
+
+</div>
+</body>
+</html>

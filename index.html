@@ -141,11 +141,31 @@ footer a { color: var(--accent); text-decoration: none; }
 
 <section>
   <h2>Writing</h2>
-  <div class="card">
-    <h3><a style="color:var(--fg);text-decoration:none" href="/blog/deposit-detection.html">Why Your Deposit Detection Misses Money</a></h3>
-    <p>Field notes from custody engineering: proxy contracts, fee-on-transfer tokens, reorgs,
-    UTXO edge cases and Solana token accounts - and why continuous reconciliation is the only real fix.
-    <a style="color:var(--accent);text-decoration:none" href="/blog/deposit-detection.html">Read &rarr;</a></p>
+  <div class="grid">
+    <div class="card">
+      <h3><a style="color:var(--fg);text-decoration:none" href="/blog/deposit-detection.html">Why Your Deposit Detection Misses Money</a></h3>
+      <p>Proxy contracts, fee-on-transfer tokens, reorgs, UTXO edge cases and Solana token
+      accounts - and why continuous reconciliation is the only real fix.
+      <a style="color:var(--accent);text-decoration:none" href="/blog/deposit-detection.html">Read &rarr;</a></p>
+    </div>
+    <div class="card">
+      <h3><a style="color:var(--fg);text-decoration:none" href="/blog/transaction-state-machines.html">Transaction State Machines for Multi-Chain Custody</a></h3>
+      <p>Broadcast is not done, confirmed is not final, and retries are where money gets lost.
+      What actually breaks, chain by chain.
+      <a style="color:var(--accent);text-decoration:none" href="/blog/transaction-state-machines.html">Read &rarr;</a></p>
+    </div>
+    <div class="card">
+      <h3><a style="color:var(--fg);text-decoration:none" href="/blog/utxo-coin-selection.html">UTXO Coin Selection in Production</a></h3>
+      <p>Your Bitcoin balance is not a number, it is a set. Fees, dust, privacy and the
+      concurrency problem the tutorials skip.
+      <a style="color:var(--accent);text-decoration:none" href="/blog/utxo-coin-selection.html">Read &rarr;</a></p>
+    </div>
+    <div class="card">
+      <h3><a style="color:var(--fg);text-decoration:none" href="/blog/stuck-transactions.html">Stuck Transactions at Scale</a></h3>
+      <p>RBF, CPFP, nonce queues, expiring blockhashes and the pinning problem - a remediation
+      playbook for transactions that will not confirm.
+      <a style="color:var(--accent);text-decoration:none" href="/blog/stuck-transactions.html">Read &rarr;</a></p>
+    </div>
   </div>
 </section>
 
