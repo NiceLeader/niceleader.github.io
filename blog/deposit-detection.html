@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Why Your Deposit Detection Misses Money - Maciej Lewandowski</title>
+<meta name="description" content="Field notes from building deposit detection for custody platforms: proxy contracts, fee-on-transfer tokens, reorgs, UTXO edge cases and Solana token accounts - and why reconciliation is the only real fix.">
+<link rel="canonical" href="https://maciejlewandowski.dev/blog/deposit-detection.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Why Your Deposit Detection Misses Money">
+<meta property="og:description" content="Field notes from custody engineering: the deposit paths that silently lose money and how to catch them.">
+<meta property="og:url" content="https://maciejlewandowski.dev/blog/deposit-detection.html">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Why Your Deposit Detection Misses Money",
+  "datePublished": "2026-07-22",
+  "author": { "@type": "Person", "name": "Maciej Lewandowski", "url": "https://maciejlewandowski.dev/" },
+  "publisher": { "@type": "Person", "name": "Maciej Lewandowski" },
+  "mainEntityOfPage": "https://maciejlewandowski.dev/blog/deposit-detection.html"
+}
+</script>
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f6f8fa; --fg: #1f2328; --fg2: #59636e;
+  --accent: #0969da; --border: #d1d9e0; --code: #f6f8fa;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --fg: #e6edf3; --fg2: #9198a1;
+    --accent: #58a6ff; --border: #30363d; --code: #161b22;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--fg); line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+nav { padding: 28px 0; }
+nav a { color: var(--fg2); text-decoration: none; font-size: 0.95rem; }
+nav a:hover { color: var(--accent); }
+article { padding: 16px 0 64px; }
+h1 { font-size: 2.1rem; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
+.meta { color: var(--fg2); font-size: 0.92rem; margin-bottom: 36px; }
+h2 { font-size: 1.4rem; margin: 40px 0 14px; letter-spacing: -0.01em; }
+p { margin-bottom: 18px; }
+ul, ol { margin: 0 0 18px 26px; }
+li { margin-bottom: 8px; }
+code {
+  background: var(--code); border: 1px solid var(--border); border-radius: 5px;
+  padding: 2px 6px; font-size: 0.88em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+strong { font-weight: 600; }
+.callout {
+  border-left: 3px solid var(--accent); background: var(--bg2);
+  padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 18px; color: var(--fg);
+}
+footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
+footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav><a href="/">&larr; maciejlewandowski.dev</a></nav>
+
+<article>
+<h1>Why Your Deposit Detection Misses Money</h1>
+<p class="meta">Maciej Lewandowski &middot; July 2026 &middot; Field notes from custody &amp; wallet infrastructure</p>
+
+<p>Deposit detection sounds like the easy part of a custody platform. Watch an address,
+see an incoming transaction, credit the client. Every tutorial covers it in twenty lines.</p>
+
+<p>Then you run it in production against real chains, real tokens and real users, and you
+discover that the naive version silently loses money. Not often, and that is exactly the
+problem: rare enough that you ship it, frequent enough that reconciliation will one day
+show a hole nobody can explain. These are the paths I have seen break, chain by chain.</p>
+
+<h2>ERC-20: the transaction's <code>to</code> field lies to you</h2>
+
+<p>The first mistake everyone makes is scanning transactions and checking <code>tx.to</code>.
+For ERC-20 deposits that field points at the token contract, not at your deposit address.
+The only reliable primitive is the <code>Transfer</code> event log, filtered by the recipient
+topic. So far, so standard. The edge cases are where deposits go missing:</p>
+
+<ul>
+  <li><strong>Internal transfers.</strong> A user deposits from a smart-contract wallet
+  (Safe, an exchange's hot wallet, an aggregator route). The value movement happens inside
+  an internal call. If you only look at top-level transactions you will never see it.
+  Event logs catch ERC-20s either way, but for <em>native</em> ETH there is no log at all:
+  an internal ETH transfer to your address produces no transaction with your address in
+  <code>to</code> and no event. You need trace-level data (<code>debug_traceBlock</code>,
+  or a provider that exposes internal transfers) or you will miss real money.</li>
+
+  <li><strong>Fee-on-transfer tokens.</strong> The <code>Transfer</code> event says 100,
+  your balance grows by 97, because the token skims a fee inside <code>transfer()</code>.
+  If you credit the event amount, you just created 3 tokens out of thin air on your ledger.
+  The fix is unglamorous: credit from the <strong>balance delta</strong>
+  (<code>balanceOf</code> before vs after, or per-block accounting), not from the event value,
+  for any token you have not explicitly whitelisted as standard.</li>
+
+  <li><strong>Proxy contracts.</strong> Most serious tokens are upgradeable proxies. The
+  address you whitelisted keeps its balance and its history, but the code behind it can
+  change on upgrade. Decode events against the implementation ABI, resolved through the
+  EIP-1967 slot, and treat an implementation change as an operational event worth alerting
+  on, because token semantics can change under your feet.</li>
+
+  <li><strong>The boring ones.</strong> USDT returns no boolean and uses 6 decimals, not 18.
+  Everyone knows. Every integration still gets bitten once.</li>
+</ul>
+
+<h2>Confirmations: crediting is a promise you might have to break</h2>
+
+<p>A deposit is not a fact when it appears in a block. It is a probability that increases
+with depth, and every chain prices that differently. Bitcoin finality is probabilistic
+(the classic 6 confirmations is a policy choice, not physics). Ethereum has explicit
+finalized checkpoints. Solana has commitment levels. Polygon and other high-throughput
+chains reorg shallowly all the time as a matter of routine.</p>
+
+<p>Two rules kept us honest:</p>
+
+<ul>
+  <li><strong>Pending and confirmed are different balances.</strong> Show the user the
+  pending deposit immediately, but nothing spendable until the chain-specific threshold.
+  One threshold per chain, reviewed, versioned, and boring.</li>
+  <li><strong>A reorg handler is not optional.</strong> When a block containing a credited
+  deposit disappears from the canonical chain, the deposit must transition backwards in its
+  state machine (confirmed &rarr; pending &rarr; possibly gone), the ledger entry must be
+  reversed by an explicit compensating entry (never an <code>UPDATE</code>), and a human
+  must be alerted. If your deposit pipeline has no backwards transition, you do not have a
+  state machine, you have a hope machine.</li>
+</ul>
+
+<h2>UTXO chains: deposits are outputs, not transactions</h2>
+
+<p>On Bitcoin the unit of a deposit is the UTXO, and one transaction can carry several
+outputs to the same address. Count transactions and you undercount money. Other production
+lessons from the UTXO side:</p>
+
+<ul>
+  <li><strong>Dust.</strong> Outputs below the economic cost of spending them are still
+  deposits according to your naive scanner. Credit them and you have promised the client
+  money that costs more to move than it is worth. You need a dust policy, and you need it
+  before the first dusting attack, not after, because dusting is also a tracking technique
+  aimed at deanonymizing your wallet clusters.</li>
+  <li><strong>Address reuse and gap limits.</strong> HD wallets (BIP32/44) mean every client
+  gets fresh derived addresses, and your scanner must respect the gap limit or it will stop
+  watching addresses the wallet already handed out.</li>
+  <li><strong>Sweeping changes the picture.</strong> The deposit lands on the client's
+  derived address, then ops sweeps it to hot or cold storage. Ledger-wise these are two
+  different events, and if reconciliation compares client balances against on-chain balances
+  of deposit addresses, sweeping makes everything look wrong unless the model knows about it.</li>
+</ul>
+
+<h2>Solana: the deposit does not go where you think</h2>
+
+<p>SPL token deposits do not credit the client's main address. They credit an Associated
+Token Account, a separate address derived from (owner, mint). The deposit transaction may
+even <em>create</em> that account on the fly. A scanner built on EVM assumptions, watching
+the owner address for incoming value, sees nothing at all. You watch token accounts, you
+resolve their owners, and you pick a commitment level (<code>confirmed</code> vs
+<code>finalized</code>) with the same care you pick confirmation thresholds elsewhere.</p>
+
+<h2>The only real fix: reconciliation as a continuous process</h2>
+
+<p>Every mechanism above will still occasionally miss. A provider webhook drops a block.
+A token does something creative. An engineer whitelists a chain with the wrong threshold.
+The systems that survive audits are not the ones with the cleverest scanner. They are the
+ones where an independent process continuously compares the internal ledger against
+on-chain reality and refuses to stay quiet about drift:</p>
+
+<div class="callout">
+Ledger balance and chain balance are two different measurements of the same claim.
+Reconciliation is the discipline of checking that claim all day, every day, per asset,
+per address, with alerting wired to a human. Batch reconciliation at end of day is how
+you find out about a hole twelve hours late.
+</div>
+
+<p>And the ledger itself: double-entry, append-only, balances derived as sums of entries.
+Never <code>UPDATE balance</code>. When (not if) a deposit path misbehaves, an append-only
+ledger means you can prove exactly what happened and correct it with a compensating entry.
+A mutable balance column means you get to explain to an auditor why the number is what it
+is, with no history to back you up.</p>
+
+<h2>A checklist, if you are building this</h2>
+
+<ol>
+  <li>ERC-20 by <code>Transfer</code> logs, native coin by traces, never by <code>tx.to</code> alone.</li>
+  <li>Credit unknown tokens by balance delta, not event value.</li>
+  <li>Resolve proxies via EIP-1967; alert on implementation changes.</li>
+  <li>Per-chain confirmation thresholds; pending vs confirmed as separate balances.</li>
+  <li>Deposit state machine with backwards transitions for reorgs.</li>
+  <li>UTXO: track outputs, enforce a dust policy, respect gap limits, model sweeps.</li>
+  <li>Solana: watch ATAs, not owner addresses.</li>
+  <li>Continuous reconciliation with human alerting, on an append-only double-entry ledger.</li>
+</ol>
+
+<p>None of this is exotic. All of it is the difference between a demo and a custody
+platform that a regulated institution can put real balances on.</p>
+
+</article>
+
+<footer>
+  <p>Maciej Lewandowski &middot; Senior Blockchain Engineer &middot;
+  <a href="/">maciejlewandowski.dev</a> &middot;
+  <a href="https://www.linkedin.com/in/maciej-lewandowski-76b270207/">LinkedIn</a> &middot;
+  <a href="https://github.com/NiceLeader">GitHub</a></p>
+</footer>
+
+</div>
+</body>
+</html>
