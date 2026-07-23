@@ -1,0 +1,232 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UTXO Coin Selection in Production - Maciej Lewandowski</title>
+<meta name="description" content="Your Bitcoin balance is not a number, it is a set. Coin selection under real fees, dust, privacy constraints and concurrent withdrawals.">
+<link rel="canonical" href="https://maciejlewandowski.dev/blog/utxo-coin-selection/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="UTXO Coin Selection in Production">
+<meta property="og:description" content="Your Bitcoin balance is not a number, it is a set. What that means when real money and real fees are involved.">
+<meta property="og:url" content="https://maciejlewandowski.dev/blog/utxo-coin-selection/">
+<meta property="og:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "UTXO Coin Selection in Production",
+  "datePublished": "2026-07-22",
+  "author": { "@type": "Person", "name": "Maciej Lewandowski", "url": "https://maciejlewandowski.dev/" },
+  "publisher": { "@type": "Person", "name": "Maciej Lewandowski" },
+  "mainEntityOfPage": "https://maciejlewandowski.dev/blog/utxo-coin-selection/"
+}
+</script>
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f6f8fa; --fg: #1f2328; --fg2: #59636e;
+  --accent: #0969da; --border: #d1d9e0; --code: #f6f8fa;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --fg: #e6edf3; --fg2: #9198a1;
+    --accent: #58a6ff; --border: #30363d; --code: #161b22;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--fg); line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+nav { padding: 28px 0; }
+nav a { color: var(--fg2); text-decoration: none; font-size: 0.95rem; }
+nav a:hover { color: var(--accent); }
+article { padding: 16px 0 64px; }
+h1 { font-size: 2.1rem; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
+.meta { color: var(--fg2); font-size: 0.92rem; margin-bottom: 36px; }
+h2 { font-size: 1.4rem; margin: 40px 0 14px; letter-spacing: -0.01em; }
+p { margin-bottom: 18px; }
+ul, ol { margin: 0 0 18px 26px; }
+li { margin-bottom: 8px; }
+code {
+  background: var(--code); border: 1px solid var(--border); border-radius: 5px;
+  padding: 2px 6px; font-size: 0.88em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+strong { font-weight: 600; }
+.callout {
+  border-left: 3px solid var(--accent); background: var(--bg2);
+  padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 18px; color: var(--fg);
+}
+footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
+footer a { color: var(--accent); text-decoration: none; }
+</style>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
+</head>
+<body>
+<div class="wrap">
+
+<nav><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/blog/">All posts</a></nav>
+
+<article>
+<h1>UTXO Coin Selection in Production</h1>
+<p class="meta">Maciej Lewandowski &middot; July 2026 &middot; Field notes from custody &amp; wallet infrastructure</p>
+
+<p>On account-based chains a balance is a number. On Bitcoin it is a set of unspent
+outputs, and every withdrawal is a small optimization problem: which coins do you spend,
+what does it cost, what does it leak, and what mess does it leave for the next
+withdrawal. Coin selection is where those trade-offs stop being theoretical.</p>
+
+<h2>The problem nobody states out loud</h2>
+
+<p>A withdrawal of 0.5 BTC is not "subtract 0.5 from balance". It is: pick a subset of
+your UTXOs summing to at least 0.5 plus fees, where the fee depends on how many inputs
+you picked (each input adds bytes, each byte costs the current feerate), produce a
+change output for the remainder, and accept that your choice just changed the shape of
+your wallet for every future withdrawal. Greedy answers to this create three distinct
+production problems: fees, dust, and privacy.</p>
+
+<div style="overflow-x:auto;margin:8px 0 26px">
+<svg viewBox="0 0 780 240" style="min-width:700px;width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Coin selection: UTXO set with dust and reserved coins, selected inputs building a transaction with recipient output, fresh change and fee">
+  <defs>
+    <marker id="uar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+  </defs>
+  <text x="14" y="26" style="fill:var(--fg2)">UTXO set (your "balance")</text>
+  <rect x="14" y="40" width="96" height="34" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="62" y="61" text-anchor="middle" style="fill:var(--fg)">1.20 ✓</text>
+  <rect x="14" y="82" width="96" height="34" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="62" y="103" text-anchor="middle" style="fill:var(--fg)">0.30 ✓</text>
+  <rect x="14" y="124" width="96" height="34" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="4 3"/>
+  <text x="62" y="145" text-anchor="middle" style="fill:var(--fg2)">0.008 dust</text>
+  <rect x="14" y="166" width="96" height="34" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="4 3"/>
+  <text x="62" y="187" text-anchor="middle" style="fill:var(--fg2)">0.50 reserved</text>
+  <line x1="110" y1="57" x2="250" y2="95" style="stroke:var(--fg2)" marker-end="url(#uar)"/>
+  <line x1="110" y1="99" x2="250" y2="105" style="stroke:var(--fg2)" marker-end="url(#uar)"/>
+  <rect x="254" y="62" width="200" height="86" rx="10" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="354" y="88" text-anchor="middle" style="fill:var(--fg)">transaction</text>
+  <text x="354" y="108" text-anchor="middle" style="fill:var(--fg2)">inputs: 1.20 + 0.30</text>
+  <text x="354" y="128" text-anchor="middle" style="fill:var(--fg2)">withdraw 1.40</text>
+  <line x1="454" y1="84" x2="580" y2="60" style="stroke:var(--fg2)" marker-end="url(#uar)"/>
+  <line x1="454" y1="105" x2="580" y2="118" style="stroke:var(--fg2)" marker-end="url(#uar)"/>
+  <line x1="454" y1="126" x2="580" y2="176" style="stroke:var(--fg2)" marker-end="url(#uar)"/>
+  <rect x="584" y="40" width="182" height="36" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="675" y="62" text-anchor="middle" style="fill:var(--fg)">1.400 &rarr; recipient</text>
+  <rect x="584" y="100" width="182" height="36" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="675" y="122" text-anchor="middle" style="fill:var(--fg)">0.098 &rarr; fresh change</text>
+  <rect x="584" y="160" width="182" height="36" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="4 3"/>
+  <text x="675" y="182" text-anchor="middle" style="fill:var(--fg2)">0.002 &rarr; fee</text>
+  <text x="390" y="222" text-anchor="middle" style="fill:var(--fg2)">dust: excluded &middot; reserved: held by another in-flight withdrawal</text>
+</svg>
+</div>
+
+<h2>Fees: inputs are the expensive part</h2>
+
+<ul>
+  <li><strong>Every input costs bytes; bytes cost money.</strong> A withdrawal funded
+  by fifty small deposits can cost multiples of one funded by a single large UTXO. At
+  high feerates, small UTXOs become economically unspendable: the fee to consume them
+  exceeds their value.</li>
+  <li><strong>Exact-match selection avoids change.</strong> Branch-and-bound style
+  selection (popularized by Bitcoin Core) looks for input sets that hit the target
+  without a change output. No change means fewer bytes, lower fees and one less output
+  to track. Worth having in the toolbox, worth not obsessing over: with a busy wallet
+  the hit rate is modest.</li>
+  <li><strong>Consolidate when fees are low.</strong> Fragmentation is deposit-driven:
+  every client deposit adds a UTXO. The wallets that stay cheap to operate sweep small
+  outputs into larger ones during low-fee windows, as deliberate scheduled maintenance.
+  The wallets that skip this discover the problem during a fee spike, which is precisely
+  when consolidation is unaffordable and withdrawals are most expensive.</li>
+</ul>
+
+<h2>Dust: small enough to ignore, sharp enough to cut</h2>
+
+<p>Dust is any output too small to be worth spending. It arrives two ways: as change
+you created yourself, and as deposits you did not ask for. Both need policy:</p>
+
+<ul>
+  <li><strong>Your own change:</strong> if the would-be change output falls below the
+  dust threshold, fold it into the fee. A satoshi-perfect ledger entry explains the
+  difference; a dust output just becomes a liability with a maintenance cost.</li>
+  <li><strong>Dust you receive:</strong> dusting is also a tracking technique. An
+  attacker sends tiny amounts to many addresses and watches which ones get spent
+  together, clustering wallets. A custody wallet needs an explicit stance: quarantine
+  dust by default, exclude it from selection, consolidate it deliberately (if at all)
+  through a path that accepts the linkage.</li>
+</ul>
+
+<h2>Privacy: every selection is a statement</h2>
+
+<p>Spending UTXOs together links them publicly and forever: the common-input-ownership
+heuristic is the bread and butter of chain analytics. For an institution this is not
+about hiding, it is about not broadcasting your entire operational graph:</p>
+
+<ul>
+  <li><strong>Change goes to a fresh address, always.</strong> HD derivation exists for
+  this. Address reuse converts your transaction history into a public dashboard of your
+  flows.</li>
+  <li><strong>Consolidation is the loudest thing you do.</strong> Merging hundreds of
+  UTXOs into one output publicly stamps them with common ownership. Fine, if it is a
+  decision; expensive, if it is an accident.</li>
+</ul>
+
+<h2>The part tutorials skip: concurrency</h2>
+
+<p>Real custody systems process withdrawals in parallel, and a UTXO can fund exactly
+one transaction. Without reservation, two concurrent withdrawals select overlapping
+inputs and one becomes an accidental double-spend attempt: rejected by the network,
+flagged by monitoring, alarming in an audit trail even when harmless.</p>
+
+<div class="callout">
+Treat UTXOs like inventory: selection places a hold, broadcast consumes it, failure
+releases it, and crash recovery must resolve in-flight holds by checking what actually
+reached the chain. If the words "hold", "release" and "crash recovery" are missing from
+a wallet design, coin selection is not finished.
+</div>
+
+<p>Two operational corollaries. First, reserve fee-bumping capacity: if every confirmed
+UTXO is committed to pending withdrawals, there is nothing left to CPFP a stuck
+transaction with, exactly when it is needed. Second, batching (one transaction, many
+withdrawal outputs) is a huge fee win, but it couples customers: one stuck batch is
+forty stuck withdrawals with one shared fee-bump decision. Batch, but with a bounded
+blast radius.</p>
+
+<h2>Production rules that held up</h2>
+
+<ol>
+  <li>Balance is a set. Report spendable balance from selectable UTXOs, not from the
+  raw sum; the difference (dust, unconfirmed, reserved) is real.</li>
+  <li>Selection is fee-aware: it knows the feerate before choosing, not after.</li>
+  <li>Change below dust threshold becomes fee, with a ledger entry explaining it.</li>
+  <li>Fresh change address every time, from HD derivation.</li>
+  <li>Incoming dust is quarantined, excluded from selection by default.</li>
+  <li>Consolidation is scheduled maintenance in low-fee windows, with the privacy
+  linkage accepted explicitly.</li>
+  <li>UTXO reservation with holds, releases and crash recovery. Tested, not assumed.</li>
+  <li>Keep spare UTXOs for CPFP; never commit the whole wallet to in-flight spends.</li>
+  <li>Batch withdrawals with a bounded blast radius.</li>
+</ol>
+
+<p>Coin selection looks like an algorithm question. In production it is an inventory
+management problem, a cost problem, a privacy problem and a concurrency problem wearing
+the same trench coat. Design for all four.</p>
+
+</article>
+
+<footer>
+  <p>Maciej Lewandowski &middot; Senior Blockchain Engineer &middot;
+  <a href="/">maciejlewandowski.dev</a> &middot;
+  <a href="https://www.linkedin.com/in/maciej-lewandowski-76b270207/">LinkedIn</a> &middot;
+  <a href="https://github.com/NiceLeader">GitHub</a></p>
+</footer>
+
+</div>
+</body>
+</html>

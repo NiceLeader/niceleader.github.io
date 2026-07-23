@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
   <title>Maciej Lewandowski - Custody Engineering Notes</title>
@@ -8,29 +8,29 @@
   <atom:link href="https://maciejlewandowski.dev/feed.xml" rel="self" type="application/rss+xml"/>
   <item>
     <title>Why Your Deposit Detection Misses Money</title>
-    <link>https://maciejlewandowski.dev/blog/deposit-detection.html</link>
-    <guid>https://maciejlewandowski.dev/blog/deposit-detection.html</guid>
+    <link>https://maciejlewandowski.dev/blog/deposit-detection/</link>
+    <guid>https://maciejlewandowski.dev/blog/deposit-detection/</guid>
     <pubDate>Wed, 22 Jul 2026 12:00:00 GMT</pubDate>
     <description>The deposit paths that silently lose money on EVM, Bitcoin and Solana, and why continuous reconciliation is the only real fix.</description>
   </item>
   <item>
     <title>Transaction State Machines for Multi-Chain Custody: What Actually Breaks</title>
-    <link>https://maciejlewandowski.dev/blog/transaction-state-machines.html</link>
-    <guid>https://maciejlewandowski.dev/blog/transaction-state-machines.html</guid>
+    <link>https://maciejlewandowski.dev/blog/transaction-state-machines/</link>
+    <guid>https://maciejlewandowski.dev/blog/transaction-state-machines/</guid>
     <pubDate>Wed, 22 Jul 2026 13:00:00 GMT</pubDate>
     <description>Broadcast is not done, confirmed is not final, and retries are where money gets lost.</description>
   </item>
   <item>
     <title>UTXO Coin Selection in Production</title>
-    <link>https://maciejlewandowski.dev/blog/utxo-coin-selection.html</link>
-    <guid>https://maciejlewandowski.dev/blog/utxo-coin-selection.html</guid>
+    <link>https://maciejlewandowski.dev/blog/utxo-coin-selection/</link>
+    <guid>https://maciejlewandowski.dev/blog/utxo-coin-selection/</guid>
     <pubDate>Wed, 22 Jul 2026 13:30:00 GMT</pubDate>
     <description>Your Bitcoin balance is not a number, it is a set. Fees, dust, privacy and the concurrency problem the tutorials skip.</description>
   </item>
   <item>
     <title>Stuck Transactions at Scale: RBF, CPFP and the Pinning Problem</title>
-    <link>https://maciejlewandowski.dev/blog/stuck-transactions.html</link>
-    <guid>https://maciejlewandowski.dev/blog/stuck-transactions.html</guid>
+    <link>https://maciejlewandowski.dev/blog/stuck-transactions/</link>
+    <guid>https://maciejlewandowski.dev/blog/stuck-transactions/</guid>
     <pubDate>Wed, 22 Jul 2026 14:00:00 GMT</pubDate>
     <description>A remediation playbook for transactions that will not confirm, across Bitcoin, Ethereum and Solana.</description>
   </item>
