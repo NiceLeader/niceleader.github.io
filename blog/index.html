@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Writing - Maciej Lewandowski</title>
+<meta name="description" content="Field notes from custody and wallet infrastructure engineering: Bitcoin, EVM, Solana, and the backend systems that hold real money.">
+<link rel="canonical" href="https://maciejlewandowski.dev/blog/">
+<link rel="alternate" type="application/rss+xml" title="Maciej Lewandowski - Custody Engineering Notes" href="https://maciejlewandowski.dev/feed.xml">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Writing - Maciej Lewandowski">
+<meta property="og:description" content="Field notes from custody and wallet infrastructure engineering.">
+<meta property="og:url" content="https://maciejlewandowski.dev/blog/">
+<meta name="theme-color" content="#0b0c0e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #ffffff; --fg: #17181a; --fg2: #6b7076; --fg3: #9ca1a8;
+  --line: #e8eaec; --link: #17181a;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0c0e; --fg: #ebedef; --fg2: #979ca3; --fg3: #5f646b;
+    --line: #1e2125; --link: #ebedef;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg); color: var(--fg);
+  font-size: 16px; line-height: 1.7; font-weight: 450;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 660px; margin: 0 auto; padding: 0 24px; }
+nav { padding: 28px 0; display: flex; justify-content: space-between; align-items: baseline; }
+nav .brand { font-weight: 600; text-decoration: none; color: var(--fg); font-size: 0.95rem; }
+nav .menu a { color: var(--fg2); text-decoration: none; font-size: 0.9rem; margin-left: 18px; }
+nav .menu a:hover, nav .menu a.active { color: var(--fg); }
+header { padding: 48px 0 8px; }
+h1 { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.01em; }
+.sub { color: var(--fg2); margin-top: 6px; max-width: 560px; }
+section { padding: 32px 0 64px; }
+.post { display: block; text-decoration: none; padding: 20px 0; border-top: 1px solid var(--line); }
+.post:last-of-type { border-bottom: 1px solid var(--line); }
+.post .pt { font-weight: 600; color: var(--fg); letter-spacing: -0.005em; }
+.post:hover .pt { text-decoration: underline; text-decoration-color: var(--fg3); text-underline-offset: 3px; }
+.post .pd { color: var(--fg2); font-size: 0.93rem; margin-top: 5px; line-height: 1.6; }
+.post time { color: var(--fg3); font-size: 0.85rem; display: block; margin-top: 7px; }
+footer { padding: 24px 0 72px; color: var(--fg3); font-size: 0.85rem; }
+footer a { color: var(--fg3); text-decoration: none; margin-right: 16px; }
+footer a:hover { color: var(--fg); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <a class="brand" href="/">Maciej Lewandowski</a>
+  <span class="menu">
+    <a href="/blog/" class="active">Writing</a>
+    <a href="https://github.com/NiceLeader">GitHub</a>
+    <a href="https://www.linkedin.com/in/maciej-lewandowski-76b270207/">LinkedIn</a>
+  </span>
+</nav>
+
+<header>
+  <h1>Writing</h1>
+  <p class="sub">Field notes from custody and wallet infrastructure engineering:
+  Bitcoin, EVM, Solana, and the backend systems that hold real money.
+  Also available via <a href="/feed.xml" style="color:var(--fg2)">RSS</a>.</p>
+</header>
+
+<section>
+  <a class="post" href="/blog/deposit-detection.html">
+    <div class="pt">Why Your Deposit Detection Misses Money</div>
+    <div class="pd">Proxy contracts, fee-on-transfer tokens, reorgs, UTXO edge cases and
+    Solana token accounts - and why continuous reconciliation is the only real fix.</div>
+    <time>July 2026</time>
+  </a>
+  <a class="post" href="/blog/transaction-state-machines.html">
+    <div class="pt">Transaction State Machines for Multi-Chain Custody</div>
+    <div class="pd">Broadcast is not done, confirmed is not final, and retries are where
+    money gets lost. What actually breaks, chain by chain.</div>
+    <time>July 2026</time>
+  </a>
+  <a class="post" href="/blog/utxo-coin-selection.html">
+    <div class="pt">UTXO Coin Selection in Production</div>
+    <div class="pd">Your Bitcoin balance is not a number, it is a set. Fees, dust, privacy
+    and the concurrency problem the tutorials skip.</div>
+    <time>July 2026</time>
+  </a>
+  <a class="post" href="/blog/stuck-transactions.html">
+    <div class="pt">Stuck Transactions at Scale</div>
+    <div class="pd">RBF, CPFP, nonce queues, expiring blockhashes and the pinning problem -
+    a remediation playbook for transactions that will not confirm.</div>
+    <time>July 2026</time>
+  </a>
+</section>
+
+<footer>
+  <a href="/">Home</a>
+  <a href="/feed.xml">RSS</a>
+  <span style="float:right">&copy; 2026 Maciej Lewandowski</span>
+</footer>
+
+</div>
+</body>
+</html>
