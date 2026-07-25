@@ -66,6 +66,12 @@ strong { font-weight: 600; }
 }
 footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
 footer a { color: var(--accent); text-decoration: none; }
+.diagram { margin: 8px 0 26px; }
+.diagram svg { width: 100%; height: auto; display: block; }
+@media (max-width: 760px) {
+  .diagram { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .diagram svg { width: auto; height: 190px; }
+}
 </style>
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
 </head>
@@ -98,7 +104,7 @@ CONFIRMED(n) &rarr; FINALIZED</code></p>
 <p>with exits to <code>FAILED</code>, <code>REPLACED</code> and <code>EXPIRED</code>,
 and one deliberately uncomfortable arrow: <code>CONFIRMED &rarr; PENDING</code>, for reorgs.</p>
 
-<div style="margin:8px 0 26px"><svg viewBox="0 0 930 250" style="width:100%;height:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Transaction state machine with forward flow, exit states and a backwards reorg transition">
+<div class="diagram"><svg viewBox="0 0 930 250" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Transaction state machine with forward flow, exit states and a backwards reorg transition">
   <defs>
     <marker id="sar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>

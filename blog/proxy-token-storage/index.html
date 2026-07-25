@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upgradeable Tokens: Where Do the Balances Actually Live? - Maciej Lewandowski</title>
+<meta name="description" content="delegatecall, EIP-1967, storage collisions and bricked UUPS implementations: what proxy patterns mean for anyone running custody infrastructure against upgradeable tokens.">
+<link rel="canonical" href="https://maciejlewandowski.dev/blog/proxy-token-storage/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Upgradeable Tokens: Where Do the Balances Actually Live?">
+<meta property="og:description" content="delegatecall, EIP-1967, storage collisions and bricked implementations: proxy patterns from a custody engineering perspective.">
+<meta property="og:url" content="https://maciejlewandowski.dev/blog/proxy-token-storage/">
+<meta property="og:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Upgradeable Tokens: Where Do the Balances Actually Live?",
+  "datePublished": "2026-07-30",
+  "author": { "@type": "Person", "name": "Maciej Lewandowski", "url": "https://maciejlewandowski.dev/" },
+  "publisher": { "@type": "Person", "name": "Maciej Lewandowski" },
+  "mainEntityOfPage": "https://maciejlewandowski.dev/blog/proxy-token-storage/"
+}
+</script>
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f6f8fa; --fg: #1f2328; --fg2: #59636e;
+  --accent: #0969da; --border: #d1d9e0; --code: #f6f8fa;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --fg: #e6edf3; --fg2: #9198a1;
+    --accent: #58a6ff; --border: #30363d; --code: #161b22;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--fg); line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+nav { padding: 28px 0; }
+nav a { color: var(--fg2); text-decoration: none; font-size: 0.95rem; }
+nav a:hover { color: var(--accent); }
+article { padding: 16px 0 64px; }
+h1 { font-size: 2.1rem; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
+.meta { color: var(--fg2); font-size: 0.92rem; margin-bottom: 36px; }
+h2 { font-size: 1.4rem; margin: 40px 0 14px; letter-spacing: -0.01em; }
+p { margin-bottom: 18px; }
+ul, ol { margin: 0 0 18px 26px; }
+li { margin-bottom: 8px; }
+code {
+  background: var(--code); border: 1px solid var(--border); border-radius: 5px;
+  padding: 2px 6px; font-size: 0.88em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+strong { font-weight: 600; }
+.callout {
+  border-left: 3px solid var(--accent); background: var(--bg2);
+  padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 18px; color: var(--fg);
+}
+footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
+footer a { color: var(--accent); text-decoration: none; }
+</style>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
+</head>
+<body>
+<div class="wrap">
+
+<nav><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/blog/">All posts</a></nav>
+
+<article>
+<h1>Upgradeable Tokens: Where Do the Balances Actually Live?</h1>
+<p class="meta">Maciej Lewandowski &middot; July 2026 &middot; Field notes from custody &amp; wallet infrastructure</p>
+
+<p>Most serious ERC-20 tokens are not one contract. They are two: a proxy that holds
+everything and an implementation that knows everything. Miss that split and you will
+eventually decode an event wrong, allowlist the wrong address, or watch someone send
+seven figures to a contract that cannot give them back. This post is the mental model,
+and the operational consequences for anyone running custody infrastructure against
+tokens that can change their own code.</p>
+
+<h2>delegatecall: borrowed code, your storage</h2>
+
+<p>The whole pattern rests on one EVM instruction. When the proxy receives a call it
+does not understand, its fallback runs <code>delegatecall</code> into the implementation.
+The implementation's bytecode executes, but in the <strong>proxy's storage context</strong>.
+Every <code>SLOAD</code> and <code>SSTORE</code> the implementation performs reads and
+writes the proxy's storage slots. <code>msg.sender</code> and <code>msg.value</code>
+are preserved from the original call, so access control and payment logic behave as if
+the code lived at the proxy.</p>
+
+<p>The consequence people underestimate: <strong>all state lives at the proxy
+address</strong>. Balances, allowances, total supply, ownership, pause flags - all of it
+sits in the proxy's slots. The implementation contract is a stencil. Its own storage is
+empty and stays empty, because nobody ever executes it in its own context. Query
+<code>balanceOf</code> directly on the implementation address and you get zeros for
+everyone, on a contract whose code is byte-for-byte the token everyone is trading.</p>
+
+<div class="callout">
+The proxy owns the state and borrows the code. The implementation owns the code and
+has no state worth reading. Two addresses, one token, and only one of them is real to
+your ledger.
+</div>
+
+<h2>Money sent to the implementation is gone</h2>
+
+<p>Follow the model one step further and you get the classic loss path. Someone - a
+user, a script, an integration that resolved the wrong address from an explorer page -
+sends tokens or ETH to the implementation address instead of the proxy. The transfer
+succeeds. The tokens now sit in a balance mapping keyed to the implementation address,
+inside some other contract's storage, and nothing will ever move them.</p>
+
+<p>Why not? Because the implementation has no state of its own and, in almost every
+deployment, no rescue path. Well-built implementations lock themselves at construction
+(OpenZeppelin's <code>_disableInitializers</code> pattern exists precisely for this), so
+nobody can initialize them, claim ownership, and sweep. That hardening is correct - an
+initializable implementation is an attack surface - but it means the funds are not
+stuck pending a cleverer engineer. They are stuck by design, forever. Block explorers
+flag implementation addresses for a reason, and your deposit and withdrawal tooling
+should refuse them for the same reason.</p>
+
+<h2>Storage collisions: why slot 0 is a loaded gun</h2>
+
+<p>If the proxy and the implementation share one storage space, they can also fight
+over it. The naive proxy declares <code>address admin</code> as its first variable -
+slot 0. The implementation declares <code>uint256 totalSupply</code> first - also
+slot 0. Now the token's mint function happily overwrites the proxy's admin, and whoever
+can influence total supply can, with enough patience, become the admin of the proxy.
+That is not a hypothetical class of bug; it is the founding war story of the entire
+pattern.</p>
+
+<p><strong>EIP-1967</strong> is the fix, and it is beautifully dumb: the proxy keeps its
+own metadata - implementation address, admin, beacon - at pseudo-random slots derived
+from hashes like <code>keccak256("eip1967.proxy.implementation") - 1</code>. No compiler
+will ever assign a sequential variable to a slot that deep in the address space, so the
+proxy's bookkeeping and the token's business state can never collide. It also gives the
+whole ecosystem a standard place to look: read that slot and you know which code is
+really running behind any proxy, no ABI required.</p>
+
+<p>The same discipline governs upgrades. Storage slots are assigned by declaration
+order, and old data does not move when new code arrives. So upgrades must be
+<strong>append-only</strong> with respect to storage layout: never reorder variables,
+never change their types, never insert a new one in the middle. Add at the end, or
+inherit from base contracts that reserved room in advance with a <code>__gap</code> -
+a fixed-size array of unused slots that future versions can consume without shifting
+everything below it. Break this rule and the new code reads the old data through the
+wrong template: balances reinterpreted as flags, addresses as amounts. The chain will
+not revert for you. It will just be quietly, catastrophically wrong.</p>
+
+<h2>Transparent vs UUPS: where the upgrade button lives</h2>
+
+<p>Two mainstream answers to "who is allowed to swap the implementation":</p>
+
+<ul>
+  <li><strong>Transparent proxies</strong> keep the upgrade logic in the proxy itself.
+  The proxy checks on every single call whether the caller is the admin (admin calls hit
+  proxy functions, everyone else gets delegated), and that check is a gas tax paid by
+  every user on every transfer, forever. In exchange, the upgrade machinery can never be
+  accidentally removed - it does not live in the part that changes.</li>
+  <li><strong>UUPS</strong> moves <code>upgradeTo</code> into the implementation. Calls
+  are cheaper because the proxy is a bare forwarder. The price is a sharp edge: the next
+  implementation must also carry the upgrade function, because that function is the only
+  door. Deploy one version without it - or with its authorization check botched - and
+  the proxy is <strong>bricked permanently</strong>. No admin key, no governance vote,
+  no recovery. The state is intact, frozen behind code that no longer knows how to
+  change itself.</li>
+</ul>
+
+<p>Neither is wrong. Transparent buys safety with everyone's gas; UUPS buys efficiency
+with a deployment checklist that must never fail. What matters operationally is knowing
+which one a token uses, because it tells you where the keys to its future are held.</p>
+
+<h2>What this means when you hold other people's assets</h2>
+
+<p>Custody systems like to believe that an address is an identity. Proxies break that
+belief in a specific way: <strong>the address you allowlisted keeps its balances and
+its history, but its behaviour is mutable</strong>. The contract you reviewed in
+January is not necessarily the contract you are calling in June. The practices that
+kept us honest:</p>
+
+<ul>
+  <li><strong>Decode against the implementation, resolve via the slot.</strong> Events
+  and calldata follow the implementation's ABI, not whatever ABI you cached at
+  onboarding. Read the EIP-1967 slot to find the current implementation and decode
+  against that, every time, not once.</li>
+  <li><strong>Treat an implementation change as a policy event.</strong> Monitor the
+  slot (and the <code>Upgraded</code> event). When it changes, alert, re-review, and
+  decide whether the token still meets your listing criteria. Fee behaviour, pause
+  semantics, blocklists - all of it can change in one transaction that you did not sign
+  and were not asked about.</li>
+  <li><strong>Simulate at signing time, not approval time.</strong> In a custody flow
+  there are hours or days between "policy approved this withdrawal" and "the
+  transaction hits the wire". The token's code can change inside that window. A
+  simulation run immediately before signing is the only check that sees the code you
+  will actually execute against.</li>
+  <li><strong>Expect gas estimates to go stale.</strong> An upgrade that adds a hook or
+  a check changes the gas profile of <code>transfer</code>. Hardcoded gas limits that
+  were generous last month start reverting this month, and the failure will look like
+  yours, not theirs.</li>
+</ul>
+
+<p>None of this requires distrusting upgradeable tokens. It requires refusing to
+pretend they are immutable. An allowlist entry for a proxy is not a review of a
+contract; it is a subscription to whatever that contract becomes.</p>
+
+<h2>A checklist, if you are building this</h2>
+
+<ol>
+  <li>Know, for every listed token, whether it is a proxy, and record both addresses.</li>
+  <li>Refuse deposits and withdrawals addressed to known implementation contracts.</li>
+  <li>Resolve the implementation via the EIP-1967 slot at decode time, not from a cached ABI.</li>
+  <li>Alert on implementation changes and gate them through re-review before further flows.</li>
+  <li>Simulate transactions immediately before signing, not only at approval.</li>
+  <li>Never hardcode gas limits for token calls; re-estimate after any upgrade.</li>
+  <li>If you deploy proxies yourself: append-only storage layouts, <code>__gap</code> in
+  every base contract, and a UUPS upgrade path exercised on a fork before every release.</li>
+</ol>
+
+<p>The proxy pattern is a good trade: bugs get fixed, standards get adopted, tokens
+evolve. But it moves the ground under systems that assumed code at an address is a
+constant. Build for the version that ships next quarter, not the one you audited.</p>
+
+</article>
+
+<footer>
+  <p>Maciej Lewandowski &middot; Senior Blockchain Engineer &middot;
+  <a href="/">maciejlewandowski.dev</a> &middot;
+  <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a> &middot;
+  <a href="https://github.com/NiceLeader">GitHub</a></p>
+</footer>
+
+</div>
+</body>
+</html>

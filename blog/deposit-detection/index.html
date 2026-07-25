@@ -66,6 +66,12 @@ strong { font-weight: 600; }
 }
 footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
 footer a { color: var(--accent); text-decoration: none; }
+.diagram { margin: 8px 0 26px; }
+.diagram svg { width: 100%; height: auto; display: block; }
+@media (max-width: 760px) {
+  .diagram { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .diagram svg { width: auto; height: 190px; }
+}
 </style>
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
 </head>
@@ -119,7 +125,7 @@ topic. So far, so standard. The edge cases are where deposits go missing:</p>
   Everyone knows. Every integration still gets bitten once.</li>
 </ul>
 
-<div style="margin:8px 0 26px"><svg viewBox="0 0 760 170" style="width:100%;height:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Deposit pipeline: blocks scanned, pending balance, confirmed credit, with reorg path back to pending">
+<div class="diagram"><svg viewBox="0 0 760 170" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Deposit pipeline: blocks scanned, pending balance, confirmed credit, with reorg path back to pending">
   <defs>
     <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>

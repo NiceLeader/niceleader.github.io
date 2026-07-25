@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Multisig Nobody Can See - Maciej Lewandowski</title>
+<meta name="description" content="Classic P2WSH multisig confesses everything on spend. Taproot and MuSig2 make an m-of-n look like single-sig. The custody trade-offs, including MPC.">
+<link rel="canonical" href="https://maciejlewandowski.dev/blog/taproot-multisig-privacy/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="A Multisig Nobody Can See: Taproot, MuSig2 and the Custody Trade-offs">
+<meta property="og:description" content="Classic P2WSH multisig confesses everything on spend. Taproot and MuSig2 make an m-of-n look like single-sig. The custody trade-offs, including MPC.">
+<meta property="og:url" content="https://maciejlewandowski.dev/blog/taproot-multisig-privacy/">
+<meta property="og:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "A Multisig Nobody Can See: Taproot, MuSig2 and the Custody Trade-offs",
+  "datePublished": "2026-08-06",
+  "author": { "@type": "Person", "name": "Maciej Lewandowski", "url": "https://maciejlewandowski.dev/" },
+  "publisher": { "@type": "Person", "name": "Maciej Lewandowski" },
+  "mainEntityOfPage": "https://maciejlewandowski.dev/blog/taproot-multisig-privacy/"
+}
+</script>
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f6f8fa; --fg: #1f2328; --fg2: #59636e;
+  --accent: #0969da; --border: #d1d9e0; --code: #f6f8fa;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --fg: #e6edf3; --fg2: #9198a1;
+    --accent: #58a6ff; --border: #30363d; --code: #161b22;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--fg); line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+nav { padding: 28px 0; }
+nav a { color: var(--fg2); text-decoration: none; font-size: 0.95rem; }
+nav a:hover { color: var(--accent); }
+article { padding: 16px 0 64px; }
+h1 { font-size: 2.1rem; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
+.meta { color: var(--fg2); font-size: 0.92rem; margin-bottom: 36px; }
+h2 { font-size: 1.4rem; margin: 40px 0 14px; letter-spacing: -0.01em; }
+p { margin-bottom: 18px; }
+ul, ol { margin: 0 0 18px 26px; }
+li { margin-bottom: 8px; }
+code {
+  background: var(--code); border: 1px solid var(--border); border-radius: 5px;
+  padding: 2px 6px; font-size: 0.88em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+strong { font-weight: 600; }
+.callout {
+  border-left: 3px solid var(--accent); background: var(--bg2);
+  padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 18px; color: var(--fg);
+}
+footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
+footer a { color: var(--accent); text-decoration: none; }
+</style>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
+</head>
+<body>
+<div class="wrap">
+
+<nav><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/blog/">All posts</a></nav>
+
+<article>
+<h1>A Multisig Nobody Can See: Taproot, MuSig2 and the Custody Trade-offs</h1>
+<p class="meta">Maciej Lewandowski &middot; August 2026 &middot; Field notes from custody &amp; wallet infrastructure</p>
+
+<p>Institutional Bitcoin custody runs on multisig, and multisig has a dirty secret:
+the moment you spend, the chain publishes your security architecture. Taproot changed
+that. An m-of-n can now spend looking exactly like a single key, at single-key cost,
+with the recovery paths tucked away where nobody sees them unless they fire. Whether
+you should want that is a genuinely interesting question, and the answer is not
+always yes.</p>
+
+<h2>What a classic P2WSH multisig confesses</h2>
+
+<p>A 2-of-3 wrapped in P2WSH keeps its script hidden exactly until the first spend.
+Then the witness lays it all out: the full redeem script, all three public keys, the
+threshold, the two signatures that satisfied it. Every future output paying the same
+script is now trivially recognizable, and even without address reuse the spend itself
+is a template.</p>
+
+<p>Chain analytics firms live off this. The script structure, the key count, the
+threshold and the signature ordering form a fingerprint; combine it with timing and
+amount patterns and your "anonymous" treasury wallet is a labeled cluster in somebody's
+dashboard within a week of going live. Counterparties can watch your cold storage
+drain in real time. Competitors can estimate your flows. None of this requires
+breaking anything; you published it.</p>
+
+<p>You also pay for the privilege. Every key in the script is bytes, every signature
+is bytes, and bytes are money at spend time. A 2-of-3 witness is several times the
+size of a single-sig witness, and a 3-of-5 is worse. Fees scale with the size of your
+quorum, which means your security posture has a per-transaction price tag.</p>
+
+<h2>Taproot and MuSig2: n keys, one signature</h2>
+
+<p>Taproot (BIP 341) plus Schnorr signatures (BIP 340) rebuilt the deal. Schnorr
+signatures are linear, which allows something ECDSA never could: key aggregation.
+With MuSig2 (BIP 327), n cosigners combine their public keys off-chain into a single
+aggregate key, and that one key is what goes on chain in a P2TR output. Nobody looking
+at the address can tell it is a multisig. Nobody looking at the spend can either.</p>
+
+<p>Signing is a two-round interactive protocol: a nonce exchange round, then a partial
+signature round. The partial signatures combine into one ordinary 64-byte Schnorr
+signature. On chain it is indistinguishable from a hardware wallet in someone's desk
+drawer. It is also the cheapest possible spend: one key, one signature, regardless of
+whether two people or twelve stood behind it. The fee no longer depends on the size of
+your quorum. That sentence alone justifies the migration analysis.</p>
+
+<p>The script tree is the other half of the design. A P2TR output commits to an
+optional tree of alternative spending scripts behind the aggregate key. This is where
+custody recovery paths live: a timelocked 2-of-3 with backup keys that activates after
+six months of inactivity, an emergency path to a disaster-recovery quorum, whatever
+your policy demands. In the happy path, none of it is ever revealed. Spend through the
+key path for years and the chain shows a boring single-sig wallet. Only if a fallback
+path actually fires does that one branch become public, and even then only that
+branch, not its siblings.</p>
+
+<div class="callout">
+P2WSH publishes your entire security model on first spend. Taproot publishes nothing
+in the happy path and one branch in the unhappy one. Your on-chain footprint becomes
+proportional to how bad your day was.
+</div>
+
+<h2>The fine print: MuSig2 in operations</h2>
+
+<p>Now the part the conference talks skim. MuSig2 is interactive, and both rounds need
+the signers. For a hot wallet with online HSMs that is a non-event. For cold storage
+it is a real architectural constraint: a key ceremony that used to be "carry a PSBT
+into the vault, sign, carry it out" becomes two round trips, or a session where the
+cold signer stays engaged across both rounds. Air-gapped workflows that were designed
+around one-shot signing need redesign, not adaptation.</p>
+
+<p>Then there are the nonces. MuSig2 security leans hard on nonce discipline: a nonce
+must never be reused, and pre-generated nonces must never be copied, restored from
+backup, or replayed after a crash. Reuse can leak the private key, not weaken it, leak
+it. A signer that snapshots its state and restores it after a failure is a signer that
+can be tricked into signing twice with the same nonce. Nonce state must be treated
+like the key itself: generated fresh, used once, destroyed, with crash recovery that
+fails closed. This is solvable, but it is a new class of bug your old multisig simply
+did not have.</p>
+
+<p>It is worth knowing where MuSig2 stops. It is an n-of-n scheme: every aggregated
+key must sign. You build thresholds on top of it with the script tree, one leaf per
+acceptable quorum combination. FROST-style threshold schemes attack the problem
+differently, producing a true m-of-n under a single aggregate key, at the cost of a
+more involved key generation ceremony and a younger standardization story. The
+conceptual trade is maturity and simplicity versus native thresholds. Most custody
+designs today get comfortably far with MuSig2 for the primary quorum and tree leaves
+for the fallbacks.</p>
+
+<h2>MPC: the third door</h2>
+
+<p>Threshold MPC signing (TSS) reaches the same on-chain destination by a different
+road: the private key never exists anywhere in full, key shares jointly compute one
+ordinary signature, and the chain sees a plain single-sig spend. No Bitcoin script at
+all. The pitch is real: one signing stack across every chain you support, because the
+quorum logic lives in your protocol rather than in any chain's script system.</p>
+
+<p>The trade-off deserves to be stated plainly. With script multisig, Bitcoin
+consensus enforces your quorum: a 2-of-3 spend with one signature is invalid on every
+node on the planet, and no bug in your infrastructure changes that. With MPC, the
+quorum is enforced by your protocol implementation and your operational controls. If
+the implementation has a flaw, the chain will happily accept the resulting signature,
+because to the chain it is just a signature. Auditors notice this immediately: the
+property "the chain itself enforces the quorum" is gone, replaced by "trust our
+cryptographers and our change management". That can be an acceptable trade. It is
+never a free one.</p>
+
+<h2>Coordination looks the same from the inside</h2>
+
+<p>Whatever the signature scheme, the plumbing barely changes. Descriptor wallets
+describe what you are watching: <code>wsh(sortedmulti(2,keyA,keyB,keyC))</code> for
+the classic setup, <code>tr(...)</code> descriptors for Taproot. Descriptors make the
+wallet reproducible from configuration, which is exactly what a disaster-recovery
+runbook wants.</p>
+
+<p>PSBT (BIP 174) remains the transport: one coordinator builds the proposal, signers
+attach partial signatures or MuSig2 protocol data, someone combines, finalizes,
+broadcasts. Proposal, partial signatures, combine, finalize, broadcast; the pipeline
+is the same whether the witness ends up as three signatures or one. If your custody
+stack already speaks PSBT well, most of a Taproot migration is key management and
+ceremony design, not plumbing.</p>
+
+<h2>Choosing: privacy, cost, auditability</h2>
+
+<ul>
+  <li><strong>P2WSH multisig</strong> when your auditor or regulator wants the quorum
+  visible and consensus-enforced, and you will pay the fee and privacy cost for the
+  strongest possible "the chain checks our policy" story.</li>
+  <li><strong>Taproot with MuSig2</strong> when privacy and fees matter, your signers
+  can be online for two rounds, and you can hold the nonce discipline. Recovery paths
+  in the tree, invisible until needed.</li>
+  <li><strong>MPC</strong> when breadth across chains matters more than script-level
+  enforcement, and you accept that the quorum lives in your implementation rather than
+  in consensus.</li>
+</ul>
+
+<div class="callout">
+Privacy, cost, auditability - pick the two that match your threat model. The third
+one is what you will be explaining in the design review.
+</div>
+
+<h2>Checklist before you migrate</h2>
+
+<ol>
+  <li>Write down who is allowed to learn your quorum structure from the chain. That
+  single answer eliminates at least one of the three options.</li>
+  <li>Model the fee difference at your real spend volume; quorum-sized witnesses
+  versus one signature compounds fast.</li>
+  <li>Test the two-round MuSig2 ceremony against your actual cold storage process,
+  not the whiteboard version of it.</li>
+  <li>Treat nonce state as key material: fresh, single-use, destroyed, crash recovery
+  fails closed. Test the crash path deliberately.</li>
+  <li>Put every recovery and fallback quorum in the script tree with explicit
+  timelocks, and rehearse spending through one.</li>
+  <li>Keep everything descriptor-defined and PSBT-transported so the wallet is
+  reproducible from configuration alone.</li>
+  <li>Brief the auditors before the migration, not after; "invisible multisig" is a
+  feature to you and a finding to them until it is explained.</li>
+</ol>
+
+<p>The chain used to force custody to choose between security and silence. Taproot
+means you can have both, if your operations are disciplined enough to hold the
+protocol's assumptions. The signature got smaller. The engineering did not.</p>
+
+</article>
+
+<footer>
+  <p>Maciej Lewandowski &middot; Senior Blockchain Engineer &middot;
+  <a href="/">maciejlewandowski.dev</a> &middot;
+  <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a> &middot;
+  <a href="https://github.com/NiceLeader">GitHub</a></p>
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIGHASH Is a Security Parameter, Not a Construction Detail - Maciej Lewandowski</title>
+<meta name="description" content="SIGHASH_ALL, NONE, SINGLE and ANYONECANPAY: what a Bitcoin signature actually commits to, the legacy footguns, and why the flag belongs in the custody policy layer.">
+<link rel="canonical" href="https://maciejlewandowski.dev/blog/sighash-policy/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SIGHASH Is a Security Parameter, Not a Construction Detail">
+<meta property="og:description" content="What a Bitcoin signature actually commits to, the legacy footguns, and why the sighash flag belongs in the custody policy layer.">
+<meta property="og:url" content="https://maciejlewandowski.dev/blog/sighash-policy/">
+<meta property="og:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "SIGHASH Is a Security Parameter, Not a Construction Detail",
+  "datePublished": "2026-08-13",
+  "author": { "@type": "Person", "name": "Maciej Lewandowski", "url": "https://maciejlewandowski.dev/" },
+  "publisher": { "@type": "Person", "name": "Maciej Lewandowski" },
+  "mainEntityOfPage": "https://maciejlewandowski.dev/blog/sighash-policy/"
+}
+</script>
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f6f8fa; --fg: #1f2328; --fg2: #59636e;
+  --accent: #0969da; --border: #d1d9e0; --code: #f6f8fa;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --fg: #e6edf3; --fg2: #9198a1;
+    --accent: #58a6ff; --border: #30363d; --code: #161b22;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--fg); line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+nav { padding: 28px 0; }
+nav a { color: var(--fg2); text-decoration: none; font-size: 0.95rem; }
+nav a:hover { color: var(--accent); }
+article { padding: 16px 0 64px; }
+h1 { font-size: 2.1rem; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
+.meta { color: var(--fg2); font-size: 0.92rem; margin-bottom: 36px; }
+h2 { font-size: 1.4rem; margin: 40px 0 14px; letter-spacing: -0.01em; }
+p { margin-bottom: 18px; }
+ul, ol { margin: 0 0 18px 26px; }
+li { margin-bottom: 8px; }
+code {
+  background: var(--code); border: 1px solid var(--border); border-radius: 5px;
+  padding: 2px 6px; font-size: 0.88em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+strong { font-weight: 600; }
+.callout {
+  border-left: 3px solid var(--accent); background: var(--bg2);
+  padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 18px; color: var(--fg);
+}
+footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
+footer a { color: var(--accent); text-decoration: none; }
+</style>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
+</head>
+<body>
+<div class="wrap">
+
+<nav><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/blog/">All posts</a></nav>
+
+<article>
+<h1>SIGHASH Is a Security Parameter, Not a Construction Detail</h1>
+<p class="meta">Maciej Lewandowski &middot; August 2026 &middot; Field notes from custody &amp; wallet infrastructure</p>
+
+<p>Every Bitcoin signature ends with one byte that most transaction builders treat as
+boilerplate: the sighash flag. Set it to <code>SIGHASH_ALL</code>, move on, never think
+about it again. That instinct is correct right up until the day someone, or something,
+sets it to anything else. Because that byte does not tweak how the signature is encoded.
+It decides <strong>what the signature means</strong>: which parts of the transaction the
+key holder actually vouched for, and which parts anyone on the internet is free to
+rewrite after the fact.</p>
+
+<p>In a custody system, that makes it a security parameter. It deserves the same
+treatment as a withdrawal limit or a destination allowlist, and in most codebases it
+gets the same treatment as a serialization constant. This post is about closing that
+gap.</p>
+
+<h2>What the flag actually decides</h2>
+
+<p>A signature never covers the raw transaction. It covers a hash of a
+<em>reconstructed</em> transaction, and the sighash flag controls what goes into that
+reconstruction:</p>
+
+<ul>
+  <li><strong><code>SIGHASH_ALL</code> (0x01).</strong> The signature commits to all
+  inputs and all outputs. Nobody can add, remove or redirect anything without
+  invalidating it. This is the default, and outside of a handful of deliberate
+  protocols, the only one you ever want to see.</li>
+  <li><strong><code>SIGHASH_NONE</code> (0x02).</strong> Commits to the inputs but to
+  <em>no outputs at all</em>. Whoever holds the signed transaction can send the coins
+  anywhere they like. It is a signed blank cheque, and it looks exactly like a normal
+  signature to anyone not checking the flag.</li>
+  <li><strong><code>SIGHASH_SINGLE</code> (0x03).</strong> Commits to the inputs and to
+  exactly one output: the one at the same index as the input being signed. Every other
+  output is up for grabs.</li>
+  <li><strong><code>ANYONECANPAY</code> (0x80).</strong> A modifier that combines with
+  the above. It shrinks the input commitment down to only <em>your own</em> input, so
+  other parties can add theirs later without breaking your signature.</li>
+</ul>
+
+<p>Read those again as an attacker would. Three of the four are, by design, permission
+for someone else to modify a transaction you signed. That is sometimes exactly what you
+want. It is never something you want by accident.</p>
+
+<h2>The footguns are not theoretical</h2>
+
+<p>The legacy sighash algorithm has a famous bug. If you sign an input with
+<code>SIGHASH_SINGLE</code> and there is <em>no output at that input's index</em>, the
+algorithm does not fail. It quietly returns the constant
+<code>0x0100...00</code> (the value 1 as a 32-byte hash) as the digest to sign. Sign
+that, and you have produced a signature over a fixed, publicly known value. It is valid
+for that input in <strong>any transaction whatsoever</strong>. Anyone who sees it can
+build a transaction sweeping that coin wherever they please, and your signature blesses
+it. A bounds check that should have been an error became a universal skeleton key, and
+it sat in consensus code for years because consensus bugs are forever.</p>
+
+<p>The combinations are their own hazard class.
+<code>SIGHASH_NONE | ANYONECANPAY</code> commits to your one input and to nothing else:
+no other inputs, no outputs. The practical semantics are "here is my coin, take it".
+There are almost no legitimate reasons for a custody signer to ever produce that
+signature, and exactly one signature of that shape leaking is enough to lose the
+input.</p>
+
+<div class="callout">
+The uncomfortable property of every non-ALL sighash is that the resulting signature is
+indistinguishable from a safe one unless you inspect the flag. The transaction in your
+database looks fine. The transaction that eventually confirms is the one your
+counterparty preferred.
+</div>
+
+<h2>So why do the flags exist at all?</h2>
+
+<p>Because collaborative transaction construction is real and useful. The flags are not
+a design mistake; they are an API for multi-party flows.</p>
+
+<p><code>SIGHASH_ALL | ANYONECANPAY</code> lets you sign your input and your intended
+outputs while leaving the door open for more inputs. That is the primitive behind
+crowdfunding-style flows and one form of fee bumping: someone can attach an extra input
+to pay for a fee increase without asking you to re-sign. PayJoin-style constructions
+lean on the same idea, both parties contribute inputs to a payment, and nobody's
+signature has to die when the other side's contribution changes. <code>SIGHASH_SINGLE</code>
+pairs an input with an output, which is the building block for certain swap and
+exchange-offer patterns.</p>
+
+<p>All legitimate. All narrow. Each one is a specific protocol where the flexibility is
+the point, negotiated in advance, with both sides knowing exactly which commitments are
+open. That is very different from a general-purpose signing service that will put its
+key on whatever digest the request implies.</p>
+
+<h2>BIP-143 changed the threat model, not just the performance</h2>
+
+<p>Segwit's sighash algorithm (BIP-143) is usually described as a performance fix, and
+it is one: legacy sighashing re-hashed the whole transaction per input, so a
+transaction with many inputs did quadratic work, and adversarially shaped transactions
+made validation crawl. BIP-143 hashes linear amounts of data. But the more interesting
+change is what the signature now <strong>commits to</strong>: the amount of the input
+being spent.</p>
+
+<p>Under legacy rules, a signer cannot see input values; it signs whatever prevout
+references it is given and trusts the caller about amounts. That enabled a genuinely
+nasty attack on hardware signers: lie to the device about the value of its own inputs,
+and the difference between reality and the lie is silently burned as fees. The device
+displays "sending 0.1, fee 0.0001" while the real transaction pays a miner a fortune.
+Combine that with a colluding or bribable miner and "fee" becomes "theft with extra
+steps". Because BIP-143 folds the input amount into the digest, a signature produced
+over a lied-about amount is simply invalid. The attack dies at the signing boundary,
+which is where attacks should die.</p>
+
+<p>Taproot (BIP-341) finishes the thought. It introduces <code>SIGHASH_DEFAULT</code>
+(0x00) with the semantics of <code>SIGHASH_ALL</code>, and its digest commits to the
+amounts <em>and</em> scriptPubKeys of <strong>all</strong> inputs, not just the one
+being signed. The signer no longer needs to trust anyone's description of the
+transaction it is signing; the commitment structure verifies it. The historical arc is
+one-directional: every revision of the sighash algorithm commits to <em>more</em>,
+because every gap between what the signer saw and what the signature bound turned out
+to be exploitable.</p>
+
+<h2>The custody thesis: sighash is policy, not plumbing</h2>
+
+<p>Here is the argument in one sentence: the sighash flag decides what your key vouches
+for, and deciding what your keys vouch for is the job of the policy engine, not the
+transaction builder.</p>
+
+<p>In practice that means the flag moves out of the code path that assembles
+transactions and into the layer that already holds your limits, your destination
+allowlists, your approval quorums. And the policy fails closed:</p>
+
+<ul>
+  <li>The signing service accepts <code>SIGHASH_ALL</code>, and
+  <code>SIGHASH_DEFAULT</code> on Taproot inputs. Everything else is rejected before a
+  key is touched, regardless of what the request says or which internal service sent
+  it.</li>
+  <li>A non-ALL sighash is not a parameter, it is an <strong>exception</strong>:
+  explicitly approved, tied to a specific named flow (a fee-bump path, a PayJoin
+  integration), scoped to the wallets and templates that flow uses, and reviewed like
+  any other policy change.</li>
+  <li>Every signature is audit-logged <em>with its sighash flag</em>. If you cannot
+  answer "have we ever produced a non-ALL signature, and for what" from your logs, you
+  do not know what your keys have promised.</li>
+</ul>
+
+<p>The objection writes itself: "our builder only ever sets ALL, why add a check?"
+Because the builder is one code path among many, today. Libraries default sensibly
+until a refactor, a new integration, or a compromised dependency does not. A policy
+check at the signing boundary costs one comparison and turns a whole class of silent
+key-misuse bugs into loud, immediate rejections. That is the cheapest trade in
+security engineering.</p>
+
+<h2>A checklist, if you are holding keys</h2>
+
+<ol>
+  <li>Enforce <code>SIGHASH_ALL</code> (or <code>SIGHASH_DEFAULT</code> on Taproot) at
+  the signing boundary; fail closed on everything else.</li>
+  <li>Treat any other flag as a named, separately approved exception bound to a
+  specific flow, never a request parameter.</li>
+  <li>Log the sighash flag with every signature you ever produce.</li>
+  <li>Prefer segwit and Taproot spend paths so signatures commit to amounts; treat
+  remaining legacy inputs as the higher-risk path they are.</li>
+  <li>If you must use <code>SIGHASH_SINGLE</code> anywhere, validate that the matching
+  output index exists before signing, every time.</li>
+  <li>Alert on any rejected non-ALL request: it is either a bug or a probe, and both
+  deserve a human.</li>
+</ol>
+
+<p>A signature is only as safe as the thing it commits to.</p>
+
+</article>
+
+<footer>
+  <p>Maciej Lewandowski &middot; Senior Blockchain Engineer &middot;
+  <a href="/">maciejlewandowski.dev</a> &middot;
+  <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a> &middot;
+  <a href="https://github.com/NiceLeader">GitHub</a></p>
+</footer>
+
+</div>
+</body>
+</html>

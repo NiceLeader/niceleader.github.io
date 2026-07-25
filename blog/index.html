@@ -55,6 +55,10 @@ section { padding: 32px 0 64px; }
 footer { padding: 24px 0 72px; color: var(--fg3); font-size: 0.85rem; }
 footer a { color: var(--fg3); text-decoration: none; margin-right: 16px; }
 footer a:hover { color: var(--fg); }
+@media (max-width: 480px) {
+  nav { flex-direction: column; align-items: flex-start; gap: 10px; padding: 22px 0 18px; }
+  nav .menu a { margin-left: 0; margin-right: 18px; }
+}
 </style>
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
 </head>

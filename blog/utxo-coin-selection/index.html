@@ -66,6 +66,12 @@ strong { font-weight: 600; }
 }
 footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
 footer a { color: var(--accent); text-decoration: none; }
+.diagram { margin: 8px 0 26px; }
+.diagram svg { width: 100%; height: auto; display: block; }
+@media (max-width: 760px) {
+  .diagram { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .diagram svg { width: auto; height: 190px; }
+}
 </style>
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
 </head>
@@ -92,7 +98,7 @@ change output for the remainder, and accept that your choice just changed the sh
 your wallet for every future withdrawal. Greedy answers to this create three distinct
 production problems: fees, dust, and privacy.</p>
 
-<div style="margin:8px 0 26px"><svg viewBox="0 0 780 240" style="width:100%;height:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Coin selection: UTXO set with dust and reserved coins, selected inputs building a transaction with recipient output, fresh change and fee">
+<div class="diagram"><svg viewBox="0 0 780 240" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Coin selection: UTXO set with dust and reserved coins, selected inputs building a transaction with recipient output, fresh change and fee">
   <defs>
     <marker id="uar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
