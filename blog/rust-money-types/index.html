@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Money in Rust: Making Illegal States Unrepresentable - Maciej Lewandowski</title>
+<meta name="description" content="Newtypes, phantom currencies, checked arithmetic, explicit rounding and typestate: how Rust's type system turns a class of financial bugs into compile errors.">
+<link rel="canonical" href="https://maciejlewandowski.dev/blog/rust-money-types/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Money in Rust: Making Illegal States Unrepresentable">
+<meta property="og:description" content="How the type system can make an entire class of financial bugs impossible to compile, using money as the running example.">
+<meta property="og:url" content="https://maciejlewandowski.dev/blog/rust-money-types/">
+<meta property="og:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Money in Rust: Making Illegal States Unrepresentable",
+  "datePublished": "2026-07-25",
+  "author": { "@type": "Person", "name": "Maciej Lewandowski", "url": "https://maciejlewandowski.dev/" },
+  "publisher": { "@type": "Person", "name": "Maciej Lewandowski" },
+  "mainEntityOfPage": "https://maciejlewandowski.dev/blog/rust-money-types/"
+}
+</script>
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f6f8fa; --fg: #1f2328; --fg2: #59636e;
+  --accent: #0969da; --border: #d1d9e0; --code: #f6f8fa;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --fg: #e6edf3; --fg2: #9198a1;
+    --accent: #58a6ff; --border: #30363d; --code: #161b22;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--fg); line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+nav { padding: 28px 0; }
+nav a { color: var(--fg2); text-decoration: none; font-size: 0.95rem; }
+nav a:hover { color: var(--accent); }
+article { padding: 16px 0 64px; }
+h1 { font-size: 2.1rem; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
+.meta { color: var(--fg2); font-size: 0.92rem; margin-bottom: 36px; }
+h2 { font-size: 1.4rem; margin: 40px 0 14px; letter-spacing: -0.01em; }
+p { margin-bottom: 18px; }
+ul, ol { margin: 0 0 18px 26px; }
+li { margin-bottom: 8px; }
+code {
+  background: var(--code); border: 1px solid var(--border); border-radius: 5px;
+  padding: 2px 6px; font-size: 0.88em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+pre {
+  background: var(--code); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 16px; overflow-x: auto; margin-bottom: 18px;
+  font-size: 0.85rem; line-height: 1.55;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+pre code {
+  background: none; border: 0; border-radius: 0; padding: 0;
+  font-size: inherit; line-height: inherit;
+}
+strong { font-weight: 600; }
+.callout {
+  border-left: 3px solid var(--accent); background: var(--bg2);
+  padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 18px; color: var(--fg);
+}
+footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
+footer a { color: var(--accent); text-decoration: none; }
+</style>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
+</head>
+<body>
+<div class="wrap">
+
+<nav><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/blog/">All posts</a></nav>
+
+<article>
+<h1>Money in Rust: Making Illegal States Unrepresentable</h1>
+<p class="meta">Maciej Lewandowski &middot; July 2026 &middot; Engineering notes</p>
+
+<p>Most financial bugs are not clever. They are a value added to another value that
+happened to have the same machine representation and a completely different meaning.
+Cents plus basis points. Euros plus dollars. A quantity plus a price. The compiler saw
+two <code>i64</code> values and did exactly what it was told.</p>
+
+<p>Rust will not stop you from writing that code either, unless you spend a little type
+system on the problem. This is a tour of how much a little buys: newtypes, phantom
+currencies, checked arithmetic, explicit rounding and typestate. Everything here is
+public knowledge, and most of it costs zero bytes at runtime.</p>
+
+<h2>1. Floats are disqualified, and not for the reason you think</h2>
+
+<p>The canonical demo is the one everybody has seen:</p>
+
+<pre><code>assert_eq!(0.1_f64 + 0.2, 0.3); // fails: 0.30000000000000004</code></pre>
+
+<p>Binary floating point cannot represent 0.1 exactly, so it stores the nearest
+representable neighbour. One operation, one invisible sliver of error. Millions of
+operations across a ledger, and the slivers accumulate in a way that depends on the
+order the operations happened to run in.</p>
+
+<p>But precision is the boring half of the argument. The real problem is that the bug is
+<strong>silent</strong>. Nothing panics, nothing logs, no alert fires. You find out
+weeks later when a reconciliation job reports that assets and liabilities differ by
+0.03, and now you get to explain to somebody which of the two numbers is the true one.
+Neither is.</p>
+
+<div class="callout">
+Money is not a real number. It is a <strong>count of minor units</strong>: cents,
+satoshis, wei-scaled units, whatever the domain calls them. Counts are integers.
+<code>i64</code> holds about 92 quadrillion cents, which is enough for fiat;
+<code>i128</code> when you touch chains with 18 decimals.
+</div>
+
+<h2>2. The newtype pattern: a bare integer is a bug generator</h2>
+
+<p>An <code>i64</code> called <code>amount</code> is a promise you make in a variable
+name and break in a function signature. It will happily add itself to a timestamp, a
+quantity, a fee in basis points, or an amount in a different currency. Wrap it:</p>
+
+<pre><code>#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Cents(i64);
+
+impl Cents {
+    pub const fn new(minor_units: i64) -&gt; Self { Cents(minor_units) }
+    pub const fn as_minor_units(self) -&gt; i64 { self.0 }
+}</code></pre>
+
+<p>The field is private, so the only way in and out is through named constructors. What
+you derive matters, but what you <strong>refuse</strong> to derive matters more:</p>
+
+<ul>
+  <li><strong>No <code>Default</code>.</strong> A default money value is a silent zero,
+  and a silent zero is how a missing fee becomes a free trade. Make callers say
+  <code>Cents::ZERO</code> if they mean it.</li>
+  <li><strong>No <code>Deref</code> to <code>i64</code>.</strong> That would hand back
+  every operation you just took away, which defeats the whole exercise.</li>
+  <li><strong>No blanket arithmetic.</strong> <code>Add</code> only between two
+  <code>Cents</code>. Multiplication by another <code>Cents</code> is meaningless:
+  cents squared is not a unit. Multiplication by a scalar or a rate is fine, and it
+  should have its own signature.</li>
+  <li><strong>Ordering, yes.</strong> Comparing money to money is legitimate and you
+  want it in the type.</li>
+</ul>
+
+<h2>3. Phantom types: currency at compile time, zero bytes at runtime</h2>
+
+<p><code>Cents</code> still lets you add dollars to euros. Push the currency into the
+type parameter and it stops:</p>
+
+<pre><code>use core::marker::PhantomData;
+
+pub trait Currency {
+    const CODE: &amp;'static str;
+    const EXPONENT: u32; // minor units per major unit, as a power of ten
+}
+
+pub struct USD;
+impl Currency for USD { const CODE: &amp;'static str = "USD"; const EXPONENT: u32 = 2; }
+
+pub struct EUR;
+impl Currency for EUR { const CODE: &amp;'static str = "EUR"; const EXPONENT: u32 = 2; }
+
+pub struct Money&lt;C: Currency&gt;(i64, PhantomData&lt;C&gt;);</code></pre>
+
+<p>One wrinkle worth knowing: <code>derive</code> on a generic struct adds the same bound
+to every type parameter, so <code>#[derive(Clone)]</code> demands <code>C: Clone</code>
+even though the currency tag is never stored. <code>USD</code> is a unit struct that
+implements nothing, so the derives you actually need are written by hand and the phantom
+bounds disappear:</p>
+
+<pre><code>impl&lt;C: Currency&gt; Clone for Money&lt;C&gt; { fn clone(&amp;self) -&gt; Self { *self } }
+impl&lt;C: Currency&gt; Copy for Money&lt;C&gt; {}
+// same story for Debug, PartialEq, Eq, PartialOrd and Ord
+
+impl&lt;C: Currency&gt; core::ops::Add for Money&lt;C&gt; {
+    type Output = Money&lt;C&gt;;
+    fn add(self, rhs: Self) -&gt; Self {
+        Money(self.0.checked_add(rhs.0).expect("money overflow"), PhantomData)
+    }
+}</code></pre>
+
+<p>Now <code>usd + eur</code> is not a runtime check that somebody forgot to write. It
+is a type mismatch, reported before the binary exists. And
+<code>PhantomData&lt;C&gt;</code> is zero-sized, so <code>Money&lt;USD&gt;</code> has
+exactly the same layout and the same eight bytes as the <code>i64</code> inside it. You
+paid nothing.</p>
+
+<h2>4. Conversion becomes explicit because it has to be</h2>
+
+<p>Once cross-currency addition cannot compile, the only way to combine currencies is a
+function that takes a rate. Give the rate a type that carries its own direction:</p>
+
+<pre><code>pub struct Rate&lt;From, To&gt; {
+    numerator: i64,   // scaled by 10^SCALE
+    _dir: PhantomData&lt;(From, To)&gt;,
+}
+
+impl&lt;F: Currency, T: Currency&gt; Rate&lt;F, T&gt; {
+    pub fn convert(&amp;self, amount: Money&lt;F&gt;) -&gt; Money&lt;T&gt; { /* mul, then round */ }
+    pub fn invert(self) -&gt; Rate&lt;T, F&gt; { /* explicit, and a new type */ }
+}</code></pre>
+
+<p>A <code>Rate&lt;EUR, USD&gt;</code> can only consume <code>Money&lt;EUR&gt;</code>
+and can only produce <code>Money&lt;USD&gt;</code>. Feeding it dollars is a compile
+error. Using it upside down, the single most common FX bug in existence, is a compile
+error. Inverting a rate is still possible, but you must say <code>invert()</code> out
+loud, and the result is a different type, which means the reviewer sees the decision
+instead of guessing at it.</p>
+
+<h2>5. Checked arithmetic, because release builds wrap</h2>
+
+<p>Rust panics on integer overflow in debug builds. In release builds, by default, it
+<strong>wraps</strong>. For money that is precisely the wrong behaviour: a balance that
+silently becomes a large negative number is worse than a crash, because a crash leaves
+a stack trace and wrapping leaves a plausible-looking balance.</p>
+
+<pre><code>impl&lt;C: Currency&gt; Money&lt;C&gt; {
+    pub fn checked_add(self, rhs: Self) -&gt; Option&lt;Self&gt; {
+        self.0.checked_add(rhs.0).map(|v| Money(v, PhantomData))
+    }
+    pub fn checked_mul_scalar(self, k: i64) -&gt; Option&lt;Self&gt; {
+        self.0.checked_mul(k).map(|v| Money(v, PhantomData))
+    }
+}</code></pre>
+
+<p>Two things follow. First, turn on <code>overflow-checks = true</code> in your release
+profile for anything that touches money; the cost is a branch you will never notice and
+the benefit is that wrapping stops being reachable at all. Second, decide consciously
+what the ergonomic <code>+</code> operator does. Panicking on overflow is a legitimate
+policy for an internal ledger where overflow means the input validation upstream already
+failed. It is a terrible policy inside a request handler. Pick one, write it down, and
+keep the <code>checked_*</code> family available for the paths that must degrade
+gracefully.</p>
+
+<h2>6. Rounding is a domain decision, not a default</h2>
+
+<p>Addition and subtraction stay inside the domain of minor units. Division and
+multiplication by a rate do not: they produce fractions that must be forced back onto
+the integer grid, and the way you force them is a business rule, not an implementation
+detail.</p>
+
+<ul>
+  <li><strong>Half-up</strong> is what people expect from school and what many
+  consumer-facing price displays use.</li>
+  <li><strong>Half-even</strong> (banker's rounding) breaks ties toward the even
+  neighbour so that repeated rounding does not drift upward. Standard in a lot of
+  accounting and settlement work.</li>
+  <li><strong>Truncation toward zero</strong> is what <code>/</code> gives you on Rust
+  integers, and it is almost never what you meant.</li>
+</ul>
+
+<p>The nastier version is allocation. Split 100 cents three ways and each share is 33
+with a cent left over. Rounding each share independently loses money. Distribute the
+remainder instead:</p>
+
+<pre><code>pub fn allocate(total: i64, parts: usize) -&gt; Vec&lt;i64&gt; {
+    let n = parts as i64;
+    let base = total.div_euclid(n);
+    let mut rem = total.rem_euclid(n);
+    (0..parts).map(|_| {
+        let extra = if rem &gt; 0 { rem -= 1; 1 } else { 0 };
+        base + extra
+    }).collect()
+}
+// allocate(100, 3) == [34, 34, 32]</code></pre>
+
+<p>The invariant is short enough to tattoo on the module: <strong>the sum of the parts
+equals the whole, always</strong>. Same idea for weighted splits, pro-rata fee
+distribution and dividend payouts. Somebody gets the extra cent, and the rule for who
+gets it is a product decision you should make on purpose rather than inherit from
+whichever way the floor function happened to fall.</p>
+
+<h2>7. Typestate: lifecycle in the type, not in an if statement</h2>
+
+<p>The same phantom trick models workflow. Give a transaction a state parameter and let
+each transition consume <code>self</code>:</p>
+
+<pre><code>pub struct Draft; pub struct Approved; pub struct Signed;
+
+pub struct Transaction&lt;S&gt; { payload: Payload, _state: PhantomData&lt;S&gt; }
+
+impl Transaction&lt;Draft&gt; {
+    pub fn approve(self, by: ApproverId) -&gt; Transaction&lt;Approved&gt; { /* ... */ }
+}
+impl Transaction&lt;Signed&gt; {
+    pub fn broadcast(self) -&gt; Result&lt;TxId, BroadcastError&gt; { /* ... */ }
+}</code></pre>
+
+<p><code>broadcast()</code> simply does not exist on a <code>Transaction&lt;Draft&gt;</code>.
+There is no <code>if !self.approved { return Err(...) }</code> to forget, because the
+method is not in scope. Because each transition takes <code>self</code> by value, the
+old state is moved out and cannot be reused, which kills double-approval and
+double-broadcast at the same time. The cost is that state becomes static, so anything
+genuinely dynamic (a state machine driven by a database column) still needs a runtime
+enum at the boundary. Use typestate where the flow is known at compile time and it will
+delete a whole category of guard clauses.</p>
+
+<h2>8. Property tests for what types cannot say</h2>
+
+<p>Types encode shape. They do not encode arithmetic laws. That is what property-based
+testing is for: state the invariant, let <code>proptest</code> or
+<code>quickcheck</code> hunt for the counterexample.</p>
+
+<pre><code>proptest! {
+    #[test]
+    fn allocation_preserves_total(total in -1_000_000i64..1_000_000, n in 1usize..64) {
+        let parts = allocate(total, n);
+        prop_assert_eq!(parts.len(), n);
+        prop_assert_eq!(parts.iter().sum::&lt;i64&gt;(), total);
+    }
+}</code></pre>
+
+<p>Other invariants worth pinning: add then subtract is the identity when nothing
+overflows, conversion followed by conversion back lands within one minor unit of the
+original, and ordering is consistent with the underlying integer. Shrinking is the part
+that earns its keep. When the property fails, the framework hands you the smallest
+input that breaks it, which is usually a one-line bug report you could not have written
+yourself.</p>
+
+<h2>9. The honest trade-offs</h2>
+
+<p>This design is not free, it is just cheap in the places people expect it to be
+expensive.</p>
+
+<ul>
+  <li><strong>Serialization gets fiddly.</strong> <code>serde</code> derives on
+  <code>Money&lt;C&gt;</code> want bounds on <code>C</code> that a unit struct does not
+  satisfy, so you end up writing manual <code>Serialize</code> and
+  <code>Deserialize</code> impls or reaching for the <code>bound</code> attribute.</li>
+  <li><strong>Heterogeneous collections need an escape hatch.</strong> A balance sheet
+  holding several currencies cannot be a <code>Vec&lt;Money&lt;C&gt;&gt;</code>. You
+  need an enum or a runtime-tagged <code>AnyMoney { minor: i64, code: CurrencyCode }</code>
+  at the edges, and a conversion into the typed world just inside them.</li>
+  <li><strong>Error messages grow.</strong> A mismatch three generic layers deep prints
+  a paragraph, and new team members will need a hand reading it the first time.</li>
+  <li><strong>The guarantee stops at your process boundary.</strong> JSON does not have
+  types. A request body carrying <code>{"amount": 12.5, "currency": "usd"}</code> is
+  still a float and still a string, and the only thing standing between it and your
+  ledger is a validating parse. Types protect the inside of the house; the front door
+  still needs a lock.</li>
+</ul>
+
+<p>And sometimes the right answer is smaller. If you handle one currency, do arithmetic
+that is mostly additive, and need decimal semantics for reporting, a well-tested
+<code>Decimal</code> crate plus one newtype gets you most of the safety for a fraction
+of the ceremony. The generic machinery earns its place when you are multi-currency,
+when conversions are frequent, or when the same numeric type flows through many modules
+maintained by many people. That is exactly when a human reviewer stops catching unit
+errors and the compiler needs to take over.</p>
+
+<h2>The checklist</h2>
+
+<ol>
+  <li><strong>Never floats.</strong> Integer minor units, <code>i64</code> for fiat and
+  <code>i128</code> where decimals run deep.</li>
+  <li><strong>Newtype everything</strong>, private field, named constructors, no
+  <code>Default</code>, no <code>Deref</code>.</li>
+  <li><strong>Currency in the type parameter</strong> via <code>PhantomData</code>, so
+  mixing currencies is a compile error at zero runtime cost.</li>
+  <li><strong>Conversions take a directional <code>Rate</code></strong> and inverting is
+  an explicit call that changes the type.</li>
+  <li><strong>Checked arithmetic by default</strong>, plus
+  <code>overflow-checks = true</code> in release, plus a written policy for what
+  <code>+</code> does on overflow.</li>
+  <li><strong>Rounding and allocation are named domain rules</strong> with the
+  sum-of-parts-equals-whole invariant tested, not implied.</li>
+  <li><strong>Property tests for the laws</strong>, and a validating parse at every
+  boundary where the outside world hands you a number.</li>
+</ol>
+
+<p>Type-driven design does not make money code correct. It makes a specific set of
+wrong programs impossible to build, which is a smaller claim and a far more useful one.
+The bugs that survive are the ones worth your attention.</p>
+
+</article>
+
+<footer>
+  <p>Maciej Lewandowski &middot; Senior Blockchain Engineer &middot;
+  <a href="/">maciejlewandowski.dev</a> &middot;
+  <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a> &middot;
+  <a href="https://github.com/NiceLeader">GitHub</a></p>
+</footer>
+
+</div>
+</body>
+</html>

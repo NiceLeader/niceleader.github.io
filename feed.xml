@@ -7,6 +7,20 @@
   <language>en</language>
   <atom:link href="https://maciejlewandowski.dev/feed.xml" rel="self" type="application/rss+xml"/>
   <item>
+    <title>Money in Rust: Making Illegal States Unrepresentable</title>
+    <link>https://maciejlewandowski.dev/blog/rust-money-types/</link>
+    <guid>https://maciejlewandowski.dev/blog/rust-money-types/</guid>
+    <pubDate>Sat, 25 Jul 2026 10:00:00 GMT</pubDate>
+    <description>Newtypes, phantom-typed currencies, checked arithmetic and typestate - how much of a financial bug class the compiler can take off your hands, for zero bytes.</description>
+  </item>
+  <item>
+    <title>Your Backtest Is Lying to You</title>
+    <link>https://maciejlewandowski.dev/blog/backtest-lies/</link>
+    <guid>https://maciejlewandowski.dev/blog/backtest-lies/</guid>
+    <pubDate>Sat, 25 Jul 2026 09:00:00 GMT</pubDate>
+    <description>Look-ahead bias, survivorship, point-in-time data and overfitting - why a backtest is a replay engine, and what that demands of it.</description>
+  </item>
+  <item>
     <title>Why Your Deposit Detection Misses Money</title>
     <link>https://maciejlewandowski.dev/blog/deposit-detection/</link>
     <guid>https://maciejlewandowski.dev/blog/deposit-detection/</guid>
