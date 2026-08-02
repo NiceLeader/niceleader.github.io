@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Services - Maciej Lewandowski</title>
+<meta name="description" content="Consulting for digital asset custody and tokenization: custody architecture review, MiCA Article 75 evidence-readiness assessment, fractional custody engineering. Fixed fee, remote, B2B.">
+<link rel="canonical" href="https://maciejlewandowski.dev/services/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Services - Maciej Lewandowski">
+<meta property="og:description" content="Custody architecture review &middot; Article 75 evidence-readiness assessment &middot; fractional custody engineering. Fixed fee, remote, B2B.">
+<meta property="og:url" content="https://maciejlewandowski.dev/services/">
+<meta property="og:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="theme-color" content="#0b0c0e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #ffffff; --fg: #17181a; --fg2: #6b7076; --fg3: #9ca1a8;
+  --line: #e8eaec; --link: #17181a;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0c0e; --fg: #ebedef; --fg2: #979ca3; --fg3: #5f646b;
+    --line: #1e2125; --link: #ebedef;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg); color: var(--fg);
+  font-size: 16px; line-height: 1.7; font-weight: 450;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+.wrap { max-width: 660px; margin: 0 auto; padding: 0 24px; }
+
+nav.top { padding: 28px 0 0; display: flex; justify-content: flex-end; }
+nav.top a { color: var(--fg3); text-decoration: none; font-size: 0.9rem; margin-left: 18px; }
+nav.top a:hover { color: var(--fg); }
+
+header { padding: 84px 0 24px; }
+h1 { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.01em; }
+.role { color: var(--fg2); margin-top: 2px; }
+
+.intro { padding: 36px 0 8px; }
+.intro p { margin-bottom: 20px; color: var(--fg); max-width: 620px; }
+.intro p.dim { color: var(--fg2); }
+a { color: var(--link); text-decoration: underline; text-decoration-color: var(--fg3); text-underline-offset: 3px; transition: text-decoration-color .15s; }
+a:hover { text-decoration-color: var(--fg); }
+
+section { padding: 44px 0 4px; }
+h2 {
+  font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--fg3); margin-bottom: 26px;
+}
+
+dl.exp > div { display: grid; grid-template-columns: 200px 1fr; gap: 8px 32px; padding: 17px 0; border-top: 1px solid var(--line); }
+dl.exp > div:last-child { border-bottom: 1px solid var(--line); }
+dl.exp dt { font-weight: 600; font-size: 0.95rem; letter-spacing: -0.005em; }
+dl.exp dt .tag { display: block; font-weight: 450; color: var(--fg3); font-size: 0.82rem; margin-top: 4px; }
+dl.exp dd { color: var(--fg2); font-size: 0.95rem; line-height: 1.65; }
+@media (max-width: 560px) { dl.exp > div { grid-template-columns: 1fr; gap: 4px; } }
+
+.contact p { color: var(--fg2); }
+footer { padding: 64px 0 72px; color: var(--fg3); font-size: 0.85rem; }
+footer a { color: var(--fg3); text-decoration: none; margin-right: 16px; }
+footer a:hover { color: var(--fg); }
+
+@media (max-width: 620px) { header { padding: 80px 0 16px; } }
+</style>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="top">
+  <a href="/">Home</a>
+  <a href="/blog/">Writing</a>
+  <a href="https://github.com/NiceLeader">GitHub</a>
+  <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a>
+</nav>
+
+<header>
+  <h1>Services</h1>
+  <p class="role">Consulting for custody, wallets and tokenization</p>
+</header>
+
+<div class="intro">
+  <p>I work with firms that hold or move digital assets on behalf of their clients:
+  custodians, exchanges, stablecoin issuers, tokenization platforms and banks entering
+  digital assets. The engagements below are fixed-scope and fixed-fee: the deliverables
+  and the price are agreed in writing before work begins.</p>
+  <p class="dim">I build these systems in production for regulated financial
+  institutions, including tokenized deposit infrastructure inside a global bank.
+  Remote, CET timezone, B2B. Everything I learn about your systems stays under NDA.
+  How I think about these problems is public:
+  <a href="/blog/">field notes on custody engineering</a>.</p>
+</div>
+
+<section>
+  <h2>Engagements</h2>
+  <dl class="exp">
+    <div>
+      <dt>Custody architecture review
+        <span class="tag">2 weeks &middot; fixed fee</span>
+      </dt>
+      <dd>I review your custody or wallet stack end to end: key management and
+      signing flows, deposit detection, transaction lifecycle and reorg handling,
+      ledger integrity, segregation of client assets. You receive a written report
+      with findings ranked by severity, remediations in the order I would apply
+      them, and a walkthrough session. Firms commission this before an audit, after
+      an incident, or when they inherit a system nobody fully understands.</dd>
+    </div>
+    <div>
+      <dt>Evidence-readiness assessment
+        <span class="tag">1-2 weeks &middot; fixed fee</span>
+      </dt>
+      <dd>Supervisors and auditors will ask a MiCA-licensed CASP or EMT issuer to
+      show, on demand, that its register of positions matches what sits on-chain.
+      I assess how you reconcile internal ledgers against chain state today and map
+      the gaps against Article 75, the record-keeping RTS and DORA recovery
+      requirements. You receive a reconciliation policy document and an evidence
+      format your auditor can work with.</dd>
+    </div>
+    <div>
+      <dt>Fractional custody engineering
+        <span class="tag">retainer &middot; limited capacity</span>
+      </dt>
+      <dd>I stay on retainer for teams that need custody expertise without a
+      full-time hire: architecture decisions, code review of signing and ledger
+      paths, incident support, build-vs-buy guidance on wallet infrastructure
+      vendors. I take one engagement at a time.</dd>
+    </div>
+  </dl>
+</section>
+
+<section>
+  <h2>How it works</h2>
+  <dl class="exp">
+    <div>
+      <dt>Scope first</dt>
+      <dd>We start with a 30-minute call about your setup, then you receive a
+      one-page scope with a fixed price. Discovery is part of the engagement,
+      never a separate line on an invoice.</dd>
+    </div>
+    <div>
+      <dt>Read-only by default</dt>
+      <dd>Reviews and assessments require read access to code and documentation,
+      and no access beyond that. I never take custody of keys or client assets.</dd>
+    </div>
+    <div>
+      <dt>Deliverables you keep</dt>
+      <dd>Reports, policy documents and evidence formats are yours. I write them so
+      you can hand them to your auditor or your regulator without me in the room.</dd>
+    </div>
+  </dl>
+</section>
+
+<section class="contact">
+  <h2>Contact</h2>
+  <p>Write to <a href="mailto:contact@maciejlewandowski.dev">contact@maciejlewandowski.dev</a>
+  with a short description of your setup and what prompted the request, or reach me on
+  <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a>. I reply within
+  one business day.</p>
+</section>
+
+<footer>
+  <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a>
+  <a href="https://github.com/NiceLeader">GitHub</a>
+  <a href="/feed.xml">RSS</a>
+  <span style="float:right">&copy; 2026 Maciej Lewandowski</span>
+</footer>
+
+</div>
+</body>
+</html>

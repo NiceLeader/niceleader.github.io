@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Rules for Agent-Written Code in a Regulated Codebase Just Changed - Maciej Lewandowski</title>
+<meta name="description" content="The AI Act timeline moved twice in a week, and the Commission put source code expressly outside the Article 50 marking obligation. What actually binds agent-written code in EU finance is DORA and CDR 2024/1774.">
+<link rel="canonical" href="https://maciejlewandowski.dev/blog/agents-regulated-code/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="The Rules for Agent-Written Code in a Regulated Codebase Just Changed">
+<meta property="og:description" content="You do not have to label AI-written code. You do have to evidence who approved it. An engineer's reading of the AI Act, DORA and CDR 2024/1774 as of 25 July 2026.">
+<meta property="og:url" content="https://maciejlewandowski.dev/blog/agents-regulated-code/">
+<meta property="og:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "The Rules for Agent-Written Code in a Regulated Codebase Just Changed",
+  "datePublished": "2026-07-25",
+  "author": { "@type": "Person", "name": "Maciej Lewandowski", "url": "https://maciejlewandowski.dev/" },
+  "publisher": { "@type": "Person", "name": "Maciej Lewandowski" },
+  "mainEntityOfPage": "https://maciejlewandowski.dev/blog/agents-regulated-code/"
+}
+</script>
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f6f8fa; --fg: #1f2328; --fg2: #59636e;
+  --accent: #0969da; --border: #d1d9e0; --code: #f6f8fa;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --fg: #e6edf3; --fg2: #9198a1;
+    --accent: #58a6ff; --border: #30363d; --code: #161b22;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--fg); line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+nav { padding: 28px 0; }
+nav a { color: var(--fg2); text-decoration: none; font-size: 0.95rem; }
+nav a:hover { color: var(--accent); }
+article { padding: 16px 0 64px; }
+h1 { font-size: 2.1rem; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
+.meta { color: var(--fg2); font-size: 0.92rem; margin-bottom: 36px; }
+h2 { font-size: 1.4rem; margin: 40px 0 14px; letter-spacing: -0.01em; }
+p { margin-bottom: 18px; }
+ul, ol { margin: 0 0 18px 26px; }
+li { margin-bottom: 8px; }
+code {
+  background: var(--code); border: 1px solid var(--border); border-radius: 5px;
+  padding: 2px 6px; font-size: 0.88em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+pre {
+  background: var(--code); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 16px; overflow-x: auto; margin-bottom: 18px;
+  font-size: 0.85rem; line-height: 1.55;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+pre code {
+  background: none; border: 0; border-radius: 0; padding: 0;
+  font-size: inherit; line-height: inherit;
+}
+strong { font-weight: 600; }
+.callout {
+  border-left: 3px solid var(--accent); background: var(--bg2);
+  padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 18px; color: var(--fg);
+}
+footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
+footer a { color: var(--accent); text-decoration: none; }
+.diagram { margin: 8px 0 26px; }
+.diagram svg { width: 100%; height: auto; display: block; }
+@media (max-width: 760px) {
+  .diagram { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .diagram svg { width: auto; height: 190px; }
+}
+</style>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
+</head>
+<body>
+<div class="wrap">
+
+<nav><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/blog/">All posts</a></nav>
+
+<article>
+<h1>The Rules for Agent-Written Code in a Regulated Codebase Just Changed</h1>
+<p class="meta">Maciej Lewandowski &middot; 25 July 2026 &middot; Engineering notes</p>
+
+<div class="callout">
+<strong>Standing note, 25 July 2026.</strong> The position as I read it today; the timeline
+moved twice last week, so treat the date as load-bearing. I am not a lawyer and this
+is not legal advice - it is an engineer's reading of public sources, and every claim links
+to its source. Where I could not reach the primary text, I say so in the sentence.
+</div>
+
+<p>Two documents landed four days apart. On <strong>20 July 2026</strong> the Commission
+adopted its
+<a href="https://digital-strategy.ec.europa.eu/en/library/guidelines-transparency-obligations-providers-and-deployers-ai-systems">guidelines
+on the Article 50 transparency obligations</a>. On <strong>24 July 2026</strong> an amending
+regulation - the Digital Omnibus on AI, Regulation (EU) 2026/1744 - was
+<a href="https://eur-lex.europa.eu/eli/reg/2026/1744/oj">published in the Official Journal</a>.
+Between them, most of what is written online about "the AI Act and developers, August 2026"
+describes a timeline that no longer exists - almost all of it predates June, when the
+amendment stopped being a proposal.</p>
+
+<p>So, narrowly: what applies to code an agent wrote, inside a codebase a regulator can
+inspect? Not what people are looking at. The AI Act is mostly a distraction. The regulation
+that already governs your agent-written diff arrived in January 2025, is technology-neutral,
+and never mentions AI.</p>
+
+<h2>What did not happen on 2 August 2026</h2>
+
+<p>The high-risk regime did not start. Per
+<a href="https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai">the
+Commission's own regulatory-framework page</a>, obligations for standalone high-risk systems
+under Annex III moved from 2 August 2026 to <strong>2 December 2027</strong>, and AI embedded
+in Annex I products to <strong>2 August 2028</strong>. I cite the timeline page rather than
+my own reading of the amended Article 113: the consolidated text on EUR-Lex was not machine
+readable.</p>
+
+<p>What does start is narrow. First, the
+<a href="https://artificialintelligenceact.eu/article/50/">Article 50 transparency
+obligations</a> - the guidelines state that Article 50 "will apply as from 2 August 2026"
+(paragraph 153). Second,
+<a href="https://ai-act-service-desk.ec.europa.eu/en/ai-act/article-101">Article 101</a>,
+the Commission's power to fine providers of general-purpose AI models, which
+<a href="https://ai-act-service-desk.ec.europa.eu/en/ai-act/article-113">Article 113</a>
+expressly carved out of the August 2025 package. That second point is my reading of Article
+113's construction, not something official.</p>
+
+<p>And a coding agent is not a high-risk AI system. "A tool for writing software" appears
+nowhere in <a href="https://artificialintelligenceact.eu/annex/3/">Annex III</a> or
+<a href="https://artificialintelligenceact.eu/annex/1/">Annex I</a>. Annex III is a closed
+list of eight areas; in finance it reaches two things: creditworthiness assessment and credit
+scoring of natural persons (point 5(b), fraud detection expressly excluded), and risk
+assessment and pricing in life and health insurance (point 5(c)). That is the entire
+financial footprint. Annex I is product legislation - machinery, toys, lifts, medical
+devices - with no entry for development tooling. I quote Annex III as originally enacted,
+not having confirmed whether the amendment touched it.</p>
+
+<p>The chain runs one way. Classification follows intended purpose, not the tool used to
+type the source: the scoring engine is high risk either way, and the agent that wrote it is
+not high risk by association.</p>
+
+<h2>You do not have to label AI-written code</h2>
+
+<p>The most useful thing in the new guidelines, and unambiguous. On the scope of the
+Article 50(2) synthetic-content marking obligation,
+<a href="https://ec.europa.eu/newsroom/dae/redirection/document/131215">the Commission's
+guidelines of 20 July 2026</a>, paragraph 68, put outside scope:</p>
+
+<div class="callout">
+<em>"Source code understood as content written in a programming, scripting, markup, query
+or configuration language that is intended to be interpreted, compiled or executed by a
+computing system, regardless of whether it is composed of text characters. This may also
+include natural-language comments and contextual information that form an integral part of
+the source code."</em>
+</div>
+
+<p>The same paragraph extends the exclusion to SDKs, SQL, infrastructure-as-code, YAML,
+JSON configuration, schemas, scripts, machine-readable specifications and APIs. The
+reasoning sits one paragraph earlier: Article 50(2) exists to let <em>people</em> tell
+AI-generated content apart, so content not intended to be interpreted or acted upon by a
+natural person is not what it is for. Note the limit - it covers code, not everything an
+assistant emits. Documentation written for humans does not inherit it.</p>
+
+<p>If you have seen the claim that AI-generated text must be watermarked from August and
+concluded that generated code is in scope, that inference is now closed off. Where the claim
+lives: in developer discussion it is made about prose; the extension to code turns up mainly
+in vendor content. And the guidelines call themselves non-binding, though market
+surveillance authorities will work from them.</p>
+
+<p>Two things do bite on 2 August. Article 50(1), disclosure that a person is interacting
+with an AI system, applies with no transition and binds the <em>provider</em> of the tool,
+not you. And for generative systems on the market before 2 August 2026, the guidelines
+describe a transitional period for Article 50(2) marking running to 2 December 2026. Again:
+a duty of whoever ships the model.</p>
+
+<h2>Now the part that actually binds you</h2>
+
+<p>Pivot. <a href="https://eur-lex.europa.eu/eli/reg/2022/2554/oj/eng">DORA</a> has applied
+since 17 January 2025, without transposition. It is technology-neutral, which is
+precisely why it catches agent-written code without mentioning it: its requirements are
+built around the <em>change</em> and the <em>system</em>, never the author.</p>
+
+<p>Article 9(4)(e) requires documented policies, procedures and controls for ICT change
+management ensuring changes are
+<a href="https://www.digital-operational-resilience-act.com/Article_9.html">"recorded,
+tested, assessed, approved, implemented and verified in a controlled manner"</a>. The
+detail lives one level down, in
+<a href="https://eur-lex.europa.eu/eli/reg_del/2024/1774/oj/eng">Commission Delegated
+Regulation (EU) 2024/1774</a>, the RTS on ICT risk management tools, applicable from the
+same date. A caveat: EUR-Lex would not render either text for me, so the phrases below come
+from article-by-article reproductions that agree with each other, and I would check them
+against the Official Journal before relying on them.</p>
+
+<ul>
+  <li><strong><a href="https://www.springlex.eu/en/packages/dora/rts-rmf-regulation/article-16/">Article
+  16(3)</a></strong> requires source code reviews covering static and dynamic testing,
+  security testing for internet-exposed systems, identified vulnerabilities, remediation
+  plans and monitoring of their implementation. Paragraph (7) requires controls protecting
+  source-code integrity, in-house or third-party alike. Paragraph (8) requires analysis and
+  testing of proprietary software and, where feasible, open-source components, before
+  production.</li>
+  <li><strong><a href="https://www.springlex.eu/en/packages/dora/rts-rmf-regulation/article-17/">Article
+  17(1)(b)</a></strong> requires "mechanisms to ensure the independence of the functions
+  that approve changes and the functions responsible for requesting and implementing those
+  changes". That is the legal anchor of four eyes, across all changes to software, hardware,
+  firmware, systems and security parameters.</li>
+</ul>
+
+<p>None of it cares who typed the diff. No gap to fill, no exemption to claim.</p>
+
+<h2>The four-eyes problem, stated properly</h2>
+
+<p>This is where it gets interesting, and where I suspect most teams are quietly
+non-compliant. An agent produced the diff. One engineer approved it.
+Which function did that engineer perform? They <em>requested</em> the change: they wrote the
+prompt, assembled the context, decided what "done" looks like. They arguably
+<em>implemented</em> it: they chose to run the agent, they will fix what comes back wrong,
+and the output would not exist without them. Then they <em>approved</em> it. Article
+17(1)(b) requires independence between precisely those functions.</p>
+
+<p>The strongest textual argument available is that the provision speaks of
+<em>functions</em>, not natural persons. An agent is not an organisational function; it is
+an instrument of the function that invoked it. On that reading the human who ran the agent
+occupies the requesting and implementing side, and independence has to hold between them
+and whoever approves. The consequence is cheap to state: one engineer prompting an agent
+and merging its diff alone looks like a breach of 17(1)(b) - not because AI was involved,
+but because the requesting and approving functions collapsed into one person.</p>
+
+<div class="callout">
+No supervisor has published an authoritative answer. I found no interpretation from the
+ESAs, the Commission or any national competent authority confirming or rejecting that
+reading. It is a defensible position, not the answer, and anyone who tells you the question
+is settled has not looked.
+</div>
+
+<h2>Two regulators have already said it out loud</h2>
+
+<p>At EU level there is still nothing normative about AI-generated code.</p>
+
+<p><strong>BaFin</strong>, in the
+<a href="https://www.bafin.de/SharedDocs/Veroeffentlichungen/EN/Meldung/2025/meldung_2025_12_18_orientierungshilfe_ikt_risiken_en.html">Orientierungshilfe
+on ICT risks in the use of AI</a> of 18 December 2025, has a paragraph headed
+<em>"Code-Erzeugung mit KI-Assistenten"</em> - code generation with AI assistants - whose
+operative sentence is: <em>"Grundsätzlich gelten für alle Arten der Codeerstellung, sei es
+durch Menschen oder Maschinen, die gleichen Regelungen"</em>. In principle, the same rules
+apply to all kinds of code creation, whether by humans or machines. It then names one risk
+specific to generated code - that it may silently invoke AI-based functionality the user is
+unaware of, turning a non-AI application into an AI system - and points at static code
+analysis under Article 16(3) of the RTS as the control. It calls itself non-binding.</p>
+
+<p><strong>CSIRT KNF</strong>, the Polish supervisor's CERT, published a concrete control
+set on
+<a href="https://www.knf.gov.pl/knf/pl/komponenty/img/Wplyw_rozwoju_modeli_AI_na_dynamike_zagrozen_99198.pdf">23
+July 2026</a>, under the heading "AI-assisted code": approved tooling, a prohibition on
+passing sensitive data to unauthorised services, mandatory review, SAST, secret scanning,
+dependency testing and adequate security testing. It accompanies
+<a href="https://www.knf.gov.pl/aktualnosci?articleId=99168&amp;p_id=18">recommendations
+issued the day before</a>, where the authority states that it expects action and that what
+firms implement will be verified in supervision and inspections. Soft law with teeth, framed
+as cybersecurity - defect supply, attack surface - not model risk.</p>
+
+<p>Sit with the ordering: two national supervisors named coding assistants before any
+EU-level text did, and landed in the same place.</p>
+
+<h2>A trap worth flagging</h2>
+
+<p>If your internal policy still cites EBA/GL/2019/04 for SDLC or change management, it is
+citing repealed text.
+<a href="https://www.eba.europa.eu/publications-and-media/press-releases/eba-amends-its-guidelines-ict-and-security-risk-management-measures-context-dora-application">EBA/GL/2025/02</a>,
+issued 11 February 2025 and applying from 20 May 2025, deleted paragraphs 1 to 91 - the
+whole of sections 3.1 to 3.7, covering development, testing, environment separation,
+source-code integrity and change management. The EBA's stated reason: the gaps were not
+material and were covered by DORA. Cite DORA and the RTS.</p>
+
+<h2>This is ICT risk, not model risk</h2>
+
+<p>There is a reflex to route anything with "AI" in the name to model validation.
+Supervisors steer the other way. The revised US model risk guidance of 17 April 2026
+(<a href="https://www.federalreserve.gov/supervisionreg/srletters/SR2602.htm">SR 26-2</a> /
+<a href="https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-13.html">OCC
+2026-13</a>) states flatly: "Generative AI and agentic AI models are novel and rapidly
+evolving. As such, they are not within the scope of this guidance." US supervisory guidance,
+not EU law - a signal, not an obligation. BaFin points the same way, excluding model
+methodology from its Orientierungshilfe and treating AI as an ICT asset.</p>
+
+<p>The engineering consequence: your evidence lives in the change management and ICT risk
+process, not a model validation file. That decides who you talk to, and what artefacts you
+produce.</p>
+
+<h2>The supervisor is walking towards this</h2>
+
+<p>The ECB's
+<a href="https://www.bankingsupervision.europa.eu/framework/priorities/html/ssm.supervisory_priorities202511.en.html">supervisory
+priorities for 2026-2028</a> announce, under operational resilience, "a targeted review of
+ICT change management to identify gaps in basic control frameworks". Non-binding, but they
+steer inspection planning, and that is the sentence to read twice.</p>
+
+<p>Meanwhile, the adoption numbers.
+<a href="https://www.bankingsupervision.europa.eu/press/speeches/date/2026/html/ssm.sp260224~6c5b64a77a.en.html">An
+ECB Supervisory Board speech of 24 February 2026</a> puts AI use at over 85% of large
+European banks, with generative AI deployed first in IT operations, "to support incident
+management, coding or system maintenance".
+<a href="https://www.esma.europa.eu/sites/default/files/2026-02/ESMA50-481369926-30599_TRV_Risk_Analysis_AI_adoption_and_trends_in_securities_markets.pdf">ESMA's
+February 2026 analysis</a> finds 87% of reported AI use cases purely internal and code
+generation the third most common use case overall.
+<a href="https://www.amf-france.org/sites/institutionnel/files/private/2026-02/202602-rapport-amf-ia-et-acteurs-des-marches-financiers-en.pdf">The
+AMF's French survey</a> puts code generation at 8% of use cases, mainly in IT teams, and
+just 5% of firms training technical functions including developers. Neither attaches a risk
+comment to code generation: they are counting, not yet expecting. Adoption is far ahead of
+governance, and the gap is not in the law - it is in the evidence.</p>
+
+<h2>What this means for the pipeline</h2>
+
+<p>The picture I would want to draw for an auditor: every box leaves an artefact behind.</p>
+
+<div class="diagram"><svg viewBox="0 0 780 220" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Left to right chain: intent plus context, agent, diff, review by a second human, merge, deploy. Each box has a retained artifact beneath it, and a band underneath spans all six labelled evidence chain, what an audit asks for.">
+  <defs>
+    <marker id="ecar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+    <marker id="ecar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/>
+    </marker>
+  </defs>
+  <text x="452" y="26" text-anchor="middle" style="fill:var(--accent);font-size:11px">independence: CDR 2024/1774 Art. 17(1)(b)</text>
+  <line x1="452" y1="34" x2="452" y2="52" style="stroke:var(--accent)" marker-end="url(#ecar2)"/>
+
+  <rect x="8" y="56" width="140" height="40" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="78" y="81" text-anchor="middle" style="fill:var(--fg)">intent + context</text>
+  <line x1="150" y1="76" x2="164" y2="76" style="stroke:var(--fg2)" marker-end="url(#ecar)"/>
+
+  <rect x="168" y="56" width="96" height="40" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="216" y="81" text-anchor="middle" style="fill:var(--fg)">agent</text>
+  <line x1="266" y1="76" x2="280" y2="76" style="stroke:var(--fg2)" marker-end="url(#ecar)"/>
+
+  <rect x="284" y="56" width="68" height="40" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="318" y="81" text-anchor="middle" style="fill:var(--fg)">diff</text>
+  <line x1="354" y1="76" x2="368" y2="76" style="stroke:var(--fg2)" marker-end="url(#ecar)"/>
+
+  <rect x="372" y="56" width="160" height="40" rx="8" style="fill:var(--code);stroke:var(--accent)" stroke-width="2"/>
+  <text x="452" y="81" text-anchor="middle" style="fill:var(--fg)">review (second human)</text>
+  <line x1="534" y1="76" x2="548" y2="76" style="stroke:var(--fg2)" marker-end="url(#ecar)"/>
+
+  <rect x="552" y="56" width="80" height="40" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="592" y="81" text-anchor="middle" style="fill:var(--fg)">merge</text>
+  <line x1="634" y1="76" x2="648" y2="76" style="stroke:var(--fg2)" marker-end="url(#ecar)"/>
+
+  <rect x="652" y="56" width="94" height="40" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="699" y="81" text-anchor="middle" style="fill:var(--fg)">deploy</text>
+
+  <line x1="78" y1="96" x2="78" y2="106" style="stroke:var(--border)"/>
+  <line x1="216" y1="96" x2="216" y2="106" style="stroke:var(--border)"/>
+  <line x1="318" y1="96" x2="318" y2="106" style="stroke:var(--border)"/>
+  <line x1="452" y1="96" x2="452" y2="106" style="stroke:var(--border)"/>
+  <line x1="592" y1="96" x2="592" y2="106" style="stroke:var(--border)"/>
+  <line x1="699" y1="96" x2="699" y2="106" style="stroke:var(--border)"/>
+
+  <text x="78" y="120" text-anchor="middle" style="fill:var(--fg2);font-size:10px">prompt + context</text>
+  <text x="216" y="120" text-anchor="middle" style="fill:var(--fg2);font-size:10px">tool + version</text>
+  <text x="318" y="120" text-anchor="middle" style="fill:var(--fg2);font-size:10px">diff</text>
+  <text x="452" y="120" text-anchor="middle" style="fill:var(--fg2);font-size:10px">approver identity</text>
+  <text x="592" y="120" text-anchor="middle" style="fill:var(--fg2);font-size:10px">test run</text>
+  <text x="699" y="120" text-anchor="middle" style="fill:var(--fg2);font-size:10px">release record</text>
+
+  <rect x="8" y="136" width="738" height="44" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="377" y="163" text-anchor="middle" style="fill:var(--fg)">evidence chain: what an audit asks for</text>
+  <text x="8" y="204" style="fill:var(--fg2);font-size:11px">no artefact, no change: the auditor reconciles deploys against records, not against intentions</text>
+</svg>
+</div>
+
+<p>As defensible practice, not compliance certainty, because nobody has certified this:</p>
+
+<ul>
+  <li><strong>Record AI involvement as an attribute of the change.</strong> No framework
+  requires it, but the approved-tool control CSIRT KNF describes is unenforceable unless you
+  know which changes used which tool.</li>
+  <li><strong>Keep the prompt and context linked to the change record</strong>, alongside
+  the diff. Cheapest artefact to capture live, most expensive to reconstruct later.</li>
+  <li><strong>A human other than the one who ran the agent approves.</strong> The reading of
+  Article 17(1)(b) I would defend, and near-free.</li>
+  <li><strong>SAST and secret scanning on every agent-authored branch as a gate, not a
+  report.</strong> A scan whose findings nobody has to clear is not a control.</li>
+  <li><strong>An approved-tool list, and a rule about what code and data may leave the
+  building.</strong> Both supervisor documents name this directly.</li>
+  <li><strong>Dependency and licence checks on generated code.</strong> Article 16(8) wants
+  third-party and open-source components tested before production; licence exposure from
+  reproduced training data is copyright, not DORA.</li>
+  <li><strong>Evidence that tests were executed</strong>, not merely written. And keep the
+  branch protection configuration: auditors want to see the rule cannot be bypassed.</li>
+</ul>
+
+<h2>The open questions</h2>
+
+<p>None of these has an authoritative answer. Five honest gaps beat a false checklist.</p>
+
+<ol>
+  <li><strong>Must "AI-assisted" be an attribute of the change record?</strong> Article
+  17(1)(d) requires purpose, scope, timeline and expected outcomes, not the author or the
+  tool, and no framework I checked carries a code-provenance attribute. No obligation, no
+  prohibition, no guidance.</li>
+  <li><strong>Is human review still a real control at agent volume?</strong> The only body I
+  found engaging with this is the FSB, whose
+  <a href="https://www.fsb.org/2026/06/sound-practices-for-responsible-adoption-of-artificial-intelligence-ai-consultation-report/">June
+  2026 consultation report</a> accepts that continuous human oversight of individual agent
+  decisions becomes impractical and shifts emphasis to "human-in-command": governing the
+  boundaries of autonomy rather than approving each decision. Non-binding, consultative,
+  silent on software development. The closest thing to an answer, and not one.</li>
+  <li><strong>Is sending source code to a model as context a transfer to an ICT service
+  provider?</strong> Source code is an ICT asset under DORA, and Article 30 requires
+  contractual terms on processing locations, confidentiality and integrity. Read literally,
+  yes. No supervisory statement confirms or excludes it here.</li>
+  <li><strong>Is an agent holding repository or CI credentials an identity subject to the
+  access-control provisions?</strong> Non-human identities sit inside identity management,
+  but the RTS says nothing about autonomous agents as subjects of access. Whether an agent
+  may hold merge rights at all is Article 17(1)(b) again, from the other end.</li>
+  <li><strong>What does an auditor want when the tool changes weekly?</strong> Every
+  framework assumes stable, versioned, testable developer tooling. A model behind an API
+  changes with no version bump on your side and no change request. Whether that is an ICT
+  change you must process is unresolved: the text covers changes to software, systems and
+  security parameters, and this one happens at the provider.</li>
+</ol>
+
+<h2>The checklist</h2>
+
+<ol>
+  <li><strong>Stop worrying about labelling generated code.</strong> The Commission put
+  source code outside the Article 50(2) marking obligation, comments and IaC included.</li>
+  <li><strong>Stop citing the August 2026 high-risk deadline.</strong> Per the Commission's
+  timeline it is December 2027 for Annex III, August 2028 for Annex I.</li>
+  <li><strong>Stop citing EBA/GL/2019/04 for SDLC.</strong> Deleted with effect from
+  20 May 2025.</li>
+  <li><strong>Take it to ICT risk, not model validation.</strong> That is where the evidence
+  lives and where the review is coming.</li>
+  <li><strong>Make the approver someone other than the person who ran the agent.</strong>
+  Cheap, defensible, and the control the text most plausibly demands.</li>
+  <li><strong>Gate on SAST, secret scanning and dependency checks</strong> for agent-authored
+  branches, findings cleared rather than filed.</li>
+  <li><strong>Retain the chain</strong>: prompt and context, tool and version, diff,
+  approver, executed test results, release record - reconcilable to one change ID.</li>
+  <li><strong>Reconcile deploys against change records.</strong> Production changes with no
+  record is where audits break, and agents raise volume faster than evidence.</li>
+</ol>
+
+<p>Regulation did not arrive to stop engineers using agents. It arrived years earlier,
+technology-neutral, and already covers this without anyone writing the word "agent" into a
+statute. What the supervisors have said out loud is that there is no separate regime for
+machine-written code - and no discount either.</p>
+
+<p>So the engineering question was never "am I allowed to". It is "can I evidence what
+happened". For most teams running agents today the honest answer is no - not because the
+code is bad, but because the volume grew and the paperwork did not. That gap closes either
+deliberately, on your schedule, or in an inspection, on someone else's.</p>
+
+</article>
+
+<footer>
+  <p>Maciej Lewandowski &middot; Senior Blockchain Engineer &middot;
+  <a href="/">maciejlewandowski.dev</a> &middot;
+  <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a> &middot;
+  <a href="https://github.com/NiceLeader">GitHub</a></p>
+</footer>
+
+</div>
+</body>
+</html>

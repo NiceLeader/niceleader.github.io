@@ -85,17 +85,17 @@ footer a { color: var(--accent); text-decoration: none; }
 <p class="meta">Maciej Lewandowski &middot; July 2026 &middot; Field notes from custody &amp; wallet infrastructure</p>
 
 <p>On account-based chains a balance is a number. On Bitcoin it is a set of unspent
-outputs, and every withdrawal is a small optimization problem: which coins do you spend,
+outputs, and each withdrawal is a small optimization problem: which coins do you spend,
 what does it cost, what does it leak, and what mess does it leave for the next
 withdrawal. Coin selection is where those trade-offs stop being theoretical.</p>
 
-<h2>The problem nobody states out loud</h2>
+<h2>The shape of a withdrawal</h2>
 
-<p>A withdrawal of 0.5 BTC is not "subtract 0.5 from balance". It is: pick a subset of
-your UTXOs summing to at least 0.5 plus fees, where the fee depends on how many inputs
-you picked (each input adds bytes, each byte costs the current feerate), produce a
-change output for the remainder, and accept that your choice just changed the shape of
-your wallet for every future withdrawal. Greedy answers to this create three distinct
+<p>To withdraw 0.5 BTC you pick a subset of your UTXOs summing to at least 0.5 plus
+fees, where the fee depends on how many inputs you picked (each input adds bytes, each
+byte costs the current feerate). Then you produce a change output for the remainder and
+accept that your choice changed the shape of your wallet for each future withdrawal.
+"Subtract 0.5 from balance" hides all of that. Pick greedily and you buy three distinct
 production problems: fees, dust, and privacy.</p>
 
 <div class="diagram"><svg viewBox="0 0 780 240" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Coin selection: UTXO set with dust and reserved coins, selected inputs building a transaction with recipient output, fresh change and fee">
@@ -134,90 +134,89 @@ production problems: fees, dust, and privacy.</p>
 
 <h2>Fees: inputs are the expensive part</h2>
 
-<ul>
-  <li><strong>Every input costs bytes; bytes cost money.</strong> A withdrawal funded
-  by fifty small deposits can cost multiples of one funded by a single large UTXO. At
-  high feerates, small UTXOs become economically unspendable: the fee to consume them
-  exceeds their value.</li>
-  <li><strong>Exact-match selection avoids change.</strong> Branch-and-bound style
-  selection (popularized by Bitcoin Core) looks for input sets that hit the target
-  without a change output. No change means fewer bytes, lower fees and one less output
-  to track. Worth having in the toolbox, worth not obsessing over: with a busy wallet
-  the hit rate is modest.</li>
-  <li><strong>Consolidate when fees are low.</strong> Fragmentation is deposit-driven:
-  every client deposit adds a UTXO. The wallets that stay cheap to operate sweep small
-  outputs into larger ones during low-fee windows, as deliberate scheduled maintenance.
-  The wallets that skip this discover the problem during a fee spike, which is precisely
-  when consolidation is unaffordable and withdrawals are most expensive.</li>
-</ul>
+<p>Each input costs bytes, and bytes cost money. A withdrawal funded by fifty small
+deposits can cost multiples of one funded by a single large UTXO, and at high feerates
+small UTXOs become economically unspendable: the fee to consume them exceeds their
+value.</p>
 
-<h2>Dust: small enough to ignore, sharp enough to cut</h2>
+<p>One way to save bytes is to avoid change altogether. Branch-and-bound style
+selection, which Bitcoin Core popularized, looks for input sets that hit the target
+without a change output. No change means fewer bytes, lower fees and one less output
+to track. Keep it in the toolbox, but with a busy wallet the hit rate is modest, so
+build the rest of the system as if change is the normal case.</p>
+
+<p>The other lever is consolidation. Fragmentation is deposit-driven, since each client
+deposit adds a UTXO. Teams that keep their wallets cheap to operate sweep small outputs
+into larger ones during low-fee windows, as scheduled maintenance. Teams that skip this
+meet the problem during a fee spike, when consolidation costs the most and withdrawals
+are at their most expensive.</p>
+
+<h2>Dust</h2>
 
 <p>Dust is any output too small to be worth spending. It arrives two ways: as change
-you created yourself, and as deposits you did not ask for. Both need policy:</p>
+you created yourself, and as deposits you did not ask for. You need a policy for
+both.</p>
 
-<ul>
-  <li><strong>Your own change:</strong> if the would-be change output falls below the
-  dust threshold, fold it into the fee. A satoshi-perfect ledger entry explains the
-  difference; a dust output just becomes a liability with a maintenance cost.</li>
-  <li><strong>Dust you receive:</strong> dusting is also a tracking technique. An
-  attacker sends tiny amounts to many addresses and watches which ones get spent
-  together, clustering wallets. A custody wallet needs an explicit stance: quarantine
-  dust by default, exclude it from selection, consolidate it deliberately (if at all)
-  through a path that accepts the linkage.</li>
-</ul>
+<p>For your own change, the rule is short: if the would-be change output falls below
+the dust threshold, fold it into the fee and write a satoshi-perfect ledger entry
+explaining the difference. Keep the dust output instead and you have created a
+liability with a maintenance cost.</p>
 
-<h2>Privacy: every selection is a statement</h2>
+<p>Dust you receive is a different animal, because dusting is also a tracking
+technique. An attacker sends tiny amounts to many addresses and watches which ones you
+later spend together, clustering your wallets. Decide the stance up front: quarantine
+incoming dust by default, exclude it from selection, and if you consolidate it at all,
+do it through a path where you accept the linkage.</p>
 
-<p>Spending UTXOs together links them publicly and forever: the common-input-ownership
-heuristic is the bread and butter of chain analytics. For an institution this is not
-about hiding, it is about not broadcasting your entire operational graph:</p>
+<h2>Privacy</h2>
 
-<ul>
-  <li><strong>Change goes to a fresh address, always.</strong> HD derivation exists for
-  this. Address reuse converts your transaction history into a public dashboard of your
-  flows.</li>
-  <li><strong>Consolidation is the loudest thing you do.</strong> Merging hundreds of
-  UTXOs into one output publicly stamps them with common ownership. Fine, if it is a
-  decision; expensive, if it is an accident.</li>
-</ul>
+<p>When you spend UTXOs together you link them in the public record for good: the
+common-input-ownership heuristic is the bread and butter of chain analytics. An
+institution that ignores this broadcasts its own operational graph, which addresses
+belong together, how funds flow between them, and roughly when.</p>
 
-<h2>The part tutorials skip: concurrency</h2>
+<p>Send change to a fresh address each time; HD derivation exists for this. Reuse
+addresses and you turn your transaction history into a public dashboard of your
+flows. Consolidation makes an even louder statement: merging hundreds of UTXOs into
+one output stamps them with common ownership for anyone watching. That trade is
+acceptable when you chose it as part of a scheduled sweep, and expensive when a
+careless selection made it for you.</p>
+
+<h2>Concurrent withdrawals</h2>
 
 <p>Real custody systems process withdrawals in parallel, and a UTXO can fund exactly
-one transaction. Without reservation, two concurrent withdrawals select overlapping
-inputs and one becomes an accidental double-spend attempt: rejected by the network,
-flagged by monitoring, alarming in an audit trail even when harmless.</p>
+one transaction. Skip reservation and two concurrent withdrawals will select
+overlapping inputs; the network rejects the loser as a double-spend attempt, monitoring
+flags it, and it sits in the audit trail looking far worse than it was.</p>
 
 <div class="callout">
 Treat UTXOs like inventory: selection places a hold, broadcast consumes it, failure
-releases it, and crash recovery must resolve in-flight holds by checking what actually
-reached the chain. If the words "hold", "release" and "crash recovery" are missing from
-a wallet design, coin selection is not finished.
+releases it, and crash recovery resolves in-flight holds by checking what reached the
+chain. If a wallet design never mentions holds, releases or crash recovery, its coin
+selection is unfinished.
 </div>
 
-<p>Two operational corollaries. First, reserve fee-bumping capacity: if every confirmed
-UTXO is committed to pending withdrawals, there is nothing left to CPFP a stuck
-transaction with, exactly when it is needed. Second, batching (one transaction, many
-withdrawal outputs) is a huge fee win, but it couples customers: one stuck batch is
-forty stuck withdrawals with one shared fee-bump decision. Batch, but with a bounded
-blast radius.</p>
+<p>Two operational corollaries follow. First, reserve fee-bumping capacity: commit all
+of your confirmed UTXOs to pending withdrawals and you have nothing left to CPFP a
+stuck transaction with, at the moment you need it most. Second, batching (one
+transaction, many withdrawal outputs) is a huge fee win, but it couples customers: one
+stuck batch is forty stuck withdrawals with one shared fee-bump decision. Batch, and
+cap the blast radius when you do.</p>
 
-<h2>Production rules that held up</h2>
+<h2>What held up in production</h2>
 
-<ol>
-  <li>Balance is a set. Report spendable balance from selectable UTXOs, not from the
-  raw sum; the difference (dust, unconfirmed, reserved) is real.</li>
-  <li>Selection is fee-aware: it knows the feerate before choosing, not after.</li>
-  <li>Change below dust threshold becomes fee, with a ledger entry explaining it.</li>
-  <li>Fresh change address every time, from HD derivation.</li>
-  <li>Incoming dust is quarantined, excluded from selection by default.</li>
-  <li>Consolidation is scheduled maintenance in low-fee windows, with the privacy
-  linkage accepted explicitly.</li>
-  <li>UTXO reservation with holds, releases and crash recovery. Tested, not assumed.</li>
-  <li>Keep spare UTXOs for CPFP; never commit the whole wallet to in-flight spends.</li>
-  <li>Batch withdrawals with a bounded blast radius.</li>
-</ol>
+<p>We ended up reporting spendable balance from selectable UTXOs rather than from the
+raw sum, because the difference (dust, unconfirmed, reserved) is real. Selection knew
+the feerate before choosing inputs, not after. Change below the dust threshold went
+into the fee, with a ledger entry explaining it, and each transaction sent change to a
+fresh HD-derived address.</p>
+
+<p>Incoming dust sat in quarantine, excluded from selection by default. Consolidation
+ran as scheduled maintenance in low-fee windows, with the privacy linkage accepted as
+part of the decision. UTXO reservation shipped with holds, releases and crash recovery,
+and we tested the recovery path rather than assuming it. We kept spare UTXOs for CPFP
+instead of committing the whole wallet to in-flight spends, and we batched withdrawals
+with a bounded blast radius.</p>
 
 <p>Coin selection looks like an algorithm question. In production it is an inventory
 management problem, a cost problem, a privacy problem and a concurrency problem wearing

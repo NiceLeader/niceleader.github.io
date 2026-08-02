@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What Actually Changes When Agents Write Your Code - Maciej Lewandowski</title>
+<meta name="description" content="The bottleneck moved from writing code to verifying it. Context, decomposition, guardrails and the honest costs of running coding agents on real production codebases.">
+<link rel="canonical" href="https://maciejlewandowski.dev/blog/ai-agents-production/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="What Actually Changes When Agents Write Your Code">
+<meta property="og:description" content="Writing code stopped being the constraint. Verifying it became one. Notes from running agents daily on production codebases.">
+<meta property="og:url" content="https://maciejlewandowski.dev/blog/ai-agents-production/">
+<meta property="og:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "What Actually Changes When Agents Write Your Code",
+  "datePublished": "2026-07-25",
+  "author": { "@type": "Person", "name": "Maciej Lewandowski", "url": "https://maciejlewandowski.dev/" },
+  "publisher": { "@type": "Person", "name": "Maciej Lewandowski" },
+  "mainEntityOfPage": "https://maciejlewandowski.dev/blog/ai-agents-production/"
+}
+</script>
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f6f8fa; --fg: #1f2328; --fg2: #59636e;
+  --accent: #0969da; --border: #d1d9e0; --code: #f6f8fa;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --fg: #e6edf3; --fg2: #9198a1;
+    --accent: #58a6ff; --border: #30363d; --code: #161b22;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--fg); line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+nav { padding: 28px 0; }
+nav a { color: var(--fg2); text-decoration: none; font-size: 0.95rem; }
+nav a:hover { color: var(--accent); }
+article { padding: 16px 0 64px; }
+h1 { font-size: 2.1rem; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
+.meta { color: var(--fg2); font-size: 0.92rem; margin-bottom: 36px; }
+h2 { font-size: 1.4rem; margin: 40px 0 14px; letter-spacing: -0.01em; }
+p { margin-bottom: 18px; }
+ul, ol { margin: 0 0 18px 26px; }
+li { margin-bottom: 8px; }
+code {
+  background: var(--code); border: 1px solid var(--border); border-radius: 5px;
+  padding: 2px 6px; font-size: 0.88em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+pre {
+  background: var(--code); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 16px; overflow-x: auto; margin-bottom: 18px;
+  font-size: 0.85rem; line-height: 1.55;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+pre code {
+  background: none; border: 0; border-radius: 0; padding: 0;
+  font-size: inherit; line-height: inherit;
+}
+strong { font-weight: 600; }
+.callout {
+  border-left: 3px solid var(--accent); background: var(--bg2);
+  padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 18px; color: var(--fg);
+}
+footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
+footer a { color: var(--accent); text-decoration: none; }
+.diagram { margin: 8px 0 26px; }
+.diagram svg { width: 100%; height: auto; display: block; }
+@media (max-width: 760px) {
+  .diagram { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .diagram svg { width: auto; height: 190px; }
+}
+</style>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
+</head>
+<body>
+<div class="wrap">
+
+<nav><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/blog/">All posts</a></nav>
+
+<article>
+<h1>What Actually Changes When Agents Write Your Code</h1>
+<p class="meta">Maciej Lewandowski &middot; July 2026 &middot; Engineering notes</p>
+
+<p>I run agents against real codebases most working days. Not toy repos, not greenfield
+demos: existing systems with history, invariants nobody wrote down, and money moving
+through them. After enough of that, the interesting question stops being "can it write
+the code" and becomes "what did this actually change about the job".</p>
+
+<p>The honest answer is smaller and stranger than either the marketing or the panic
+suggests. One thing moved, and almost everything else is a consequence of that one
+thing.</p>
+
+<h2>1. The bottleneck moved</h2>
+
+<p>Writing code was never the expensive part, but it was the visible part, and for most
+of a career it was the part that limited throughput. It is not the limit any more.
+Producing a plausible 600-line change now costs a few minutes. Deciding whether those
+600 lines are correct costs what it always cost, and possibly more.</p>
+
+<p>More, because <strong>plausible code defeats the machinery you normally read with</strong>.
+Skimming a diff works because you are not really reading it, you are pattern matching
+against how a person writes when they are tired, rushed, or half-informed. Suspicious
+variable names. A copy-pasted block with one thing not renamed. A comment that no longer
+matches the line under it. Generated code has none of those signals. It is uniformly
+well-shaped, correctly named, plausibly commented, and wrong in the middle in a way that
+looks exactly like the parts that are right.</p>
+
+<p>So reading 600 lines of agent output is genuinely harder than writing 150 yourself.
+Not slower necessarily, harder. Different muscle, more expensive per line, and the tell
+you relied on is gone.</p>
+
+<div class="diagram"><svg viewBox="0 0 760 200" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Loop from intent and context to agent to diff to a verify gate, then merge, with rejected work looping back to intent and context">
+  <defs>
+    <marker id="lar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+    <marker id="lar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/>
+    </marker>
+  </defs>
+  <text x="467" y="26" text-anchor="middle" style="fill:var(--accent)">the bottleneck</text>
+  <rect x="8" y="44" width="150" height="40" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="83" y="69" text-anchor="middle" style="fill:var(--fg)">intent + context</text>
+  <line x1="158" y1="64" x2="184" y2="64" style="stroke:var(--fg2)" marker-end="url(#lar)"/>
+  <rect x="186" y="44" width="86" height="40" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="229" y="69" text-anchor="middle" style="fill:var(--fg)">agent</text>
+  <line x1="272" y1="64" x2="298" y2="64" style="stroke:var(--fg2)" marker-end="url(#lar)"/>
+  <rect x="300" y="44" width="76" height="40" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="338" y="69" text-anchor="middle" style="fill:var(--fg)">diff</text>
+  <line x1="376" y1="64" x2="402" y2="64" style="stroke:var(--fg2)" marker-end="url(#lar)"/>
+  <rect x="404" y="44" width="126" height="40" rx="8" style="fill:var(--code);stroke:var(--accent)" stroke-width="2"/>
+  <text x="467" y="69" text-anchor="middle" style="fill:var(--fg)">VERIFY</text>
+  <line x1="530" y1="64" x2="556" y2="64" style="stroke:var(--fg2)" marker-end="url(#lar)"/>
+  <rect x="558" y="44" width="96" height="40" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="606" y="69" text-anchor="middle" style="fill:var(--fg)">merge</text>
+  <path d="M 467 84 C 467 148, 83 148, 83 86" fill="none" style="stroke:var(--accent)" stroke-dasharray="5 4" marker-end="url(#lar2)"/>
+  <text x="275" y="170" text-anchor="middle" style="fill:var(--accent)">rejected</text>
+  <text x="8" y="192" style="fill:var(--fg2)">throughput is set by the gate, not by the generator</text>
+</svg>
+</div>
+
+<p>Every practice below is downstream of that picture. If a technique does not either
+improve what goes into the loop or make the gate cheaper, it is not helping.</p>
+
+<h2>2. Context is the actual product</h2>
+
+<p>The single biggest predictor of output quality is not prompt wording. It is what the
+agent can see. A vague request with rich context beats a beautifully engineered prompt
+with none, reliably enough that I stopped optimising prompts and started optimising
+context instead.</p>
+
+<p>Rich context, concretely, means: the repo conventions written down somewhere the agent
+reads by default (a project instructions file, and yes it needs maintaining like code);
+the failing test rather than a description of the failure; the exact file rather than a
+guess at the module; the list of constraints that are non-negotiable in this codebase and
+would otherwise be invisible. "We never allocate in this hot path." "This crate must stay
+<code>no_std</code>." "That column is append-only." None of that is inferable from source
+alone, and all of it is what separates a change that lands from a change that reads well.</p>
+
+<div class="callout">
+The corollary is uncomfortable and worth saying plainly: the time you used to spend
+writing code, you now spend curating what the agent knows. That is not overhead around
+the work. In this loop, it <strong>is</strong> the work.
+</div>
+
+<h2>3. Decomposition is the skill</h2>
+
+<p>Given real context, the next question is whether the task splits at all, and that is
+where most of the leverage lives.</p>
+
+<p>Independent work fans out beautifully. Audit forty files for one pattern. Write test
+coverage per module. Perform a mechanical migration across every call site. Draft docs
+for N components. Each unit needs no result from any other unit, so N agents finish in
+roughly the time one takes, and you review N diffs.</p>
+
+<p>Dependent work does not fan out at all. If step two needs the shape that step one
+chose, running them concurrently produces two incompatible half-solutions and a merge
+you will regret. Knowing which kind of work you are holding is the difference between a
+six-times speedup and six conflicting attempts.</p>
+
+<div class="diagram"><svg viewBox="0 0 760 290" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Top: one task fanning out to four independent agents converging into review. Bottom: four dependent steps in a chain with no parallelism">
+  <defs>
+    <marker id="fbr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+  </defs>
+  <text x="8" y="16" style="fill:var(--accent)">independent work: fan out</text>
+  <rect x="8" y="70" width="86" height="36" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="51" y="93" text-anchor="middle" style="fill:var(--fg)">task</text>
+  <rect x="176" y="28" width="118" height="30" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="235" y="48" text-anchor="middle" style="fill:var(--fg)">agent 1</text>
+  <rect x="176" y="66" width="118" height="30" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="235" y="86" text-anchor="middle" style="fill:var(--fg)">agent 2</text>
+  <rect x="176" y="104" width="118" height="30" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="235" y="124" text-anchor="middle" style="fill:var(--fg)">agent 3</text>
+  <rect x="176" y="142" width="118" height="30" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="235" y="162" text-anchor="middle" style="fill:var(--fg)">agent 4</text>
+  <line x1="94" y1="88" x2="174" y2="43" style="stroke:var(--fg2)" marker-end="url(#fbr)"/>
+  <line x1="94" y1="88" x2="174" y2="81" style="stroke:var(--fg2)" marker-end="url(#fbr)"/>
+  <line x1="94" y1="88" x2="174" y2="119" style="stroke:var(--fg2)" marker-end="url(#fbr)"/>
+  <line x1="94" y1="88" x2="174" y2="157" style="stroke:var(--fg2)" marker-end="url(#fbr)"/>
+  <rect x="376" y="70" width="104" height="36" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="428" y="93" text-anchor="middle" style="fill:var(--fg)">review</text>
+  <line x1="294" y1="43" x2="374" y2="82" style="stroke:var(--fg2)" marker-end="url(#fbr)"/>
+  <line x1="294" y1="81" x2="374" y2="87" style="stroke:var(--fg2)" marker-end="url(#fbr)"/>
+  <line x1="294" y1="119" x2="374" y2="93" style="stroke:var(--fg2)" marker-end="url(#fbr)"/>
+  <line x1="294" y1="157" x2="374" y2="98" style="stroke:var(--fg2)" marker-end="url(#fbr)"/>
+  <text x="500" y="80" style="fill:var(--fg2)">separate worktrees,</text>
+  <text x="500" y="100" style="fill:var(--fg2)">no shared files</text>
+  <line x1="8" y1="196" x2="752" y2="196" style="stroke:var(--border)" stroke-dasharray="4 4"/>
+  <text x="8" y="224" style="fill:var(--accent)">dependent work: chain</text>
+  <rect x="8" y="238" width="104" height="34" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="60" y="260" text-anchor="middle" style="fill:var(--fg)">step 1</text>
+  <line x1="112" y1="255" x2="140" y2="255" style="stroke:var(--fg2)" marker-end="url(#fbr)"/>
+  <rect x="142" y="238" width="104" height="34" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="194" y="260" text-anchor="middle" style="fill:var(--fg)">step 2</text>
+  <line x1="246" y1="255" x2="274" y2="255" style="stroke:var(--fg2)" marker-end="url(#fbr)"/>
+  <rect x="276" y="238" width="104" height="34" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="328" y="260" text-anchor="middle" style="fill:var(--fg)">step 3</text>
+  <line x1="380" y1="255" x2="408" y2="255" style="stroke:var(--fg2)" marker-end="url(#fbr)"/>
+  <rect x="410" y="238" width="104" height="34" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="462" y="260" text-anchor="middle" style="fill:var(--fg)">step 4</text>
+  <text x="530" y="260" style="fill:var(--fg2)">no parallelism here</text>
+</svg>
+</div>
+
+<p>One mechanical detail matters more than it sounds. Parallel agents editing the same
+files is a merge disaster, and it is the default failure of a first attempt at fan-out.
+Isolation fixes it: give each unit its own worktree or its own branch, let them finish,
+then integrate deliberately. Concurrency in an agent runner
+obeys the same rules as concurrency anywhere else, and shared mutable state is still the
+enemy.</p>
+
+<h2>4. Review it like a PR from a fast junior with no memory</h2>
+
+<p>The most useful mental model I have found is not "assistant" and definitely not
+"pair". It is a very strong junior engineer who is tireless, unusually well read, has no
+memory of yesterday, and has no stake in whether this works in production next month.</p>
+
+<p>That model tells you exactly what review posture to adopt, because it is the one you
+already use for that person:</p>
+
+<ul>
+  <li><strong>Read the diff, not the summary.</strong> The summary is generated from
+  intent, not from what the code does. It is confident either way.</li>
+  <li><strong>Ask what happens at the edges.</strong> Empty input, concurrent callers,
+  the retry, the partial failure. Breadth is the strength; the edges are where breadth
+  runs out.</li>
+  <li><strong>Be suspicious of fluent prose about code that was never executed.</strong>
+  "This correctly handles the reorg case" means the sentence was generated, not that the
+  case was tested. Run it or do not believe it.</li>
+</ul>
+
+<h2>5. Where they genuinely win</h2>
+
+<p>The pattern in every real win is the same: <strong>breadth over depth</strong>. Work
+that is wide, shallow and verifiable.</p>
+
+<ul>
+  <li>Sweeping an entire codebase for a pattern, an anti-pattern or a missing guard.</li>
+  <li>Writing the fortieth test that looks like the previous thirty-nine.</li>
+  <li>Mechanical refactors: rename across call sites, thread a parameter through, split
+  a module, migrate an API version.</li>
+  <li>First drafts of documentation, where the raw material exists and only assembly is
+  missing.</li>
+  <li>Exploring unfamiliar code to answer "where does X actually happen", which used to
+  cost an afternoon and now costs a coffee.</li>
+  <li>Scaffolding: the boring 80% of a new component that has to exist before the
+  interesting 20% can start.</li>
+</ul>
+
+<p>Note what all of these share. Each result is cheap to check. That is not a
+coincidence, it is the whole selection criterion.</p>
+
+<h2>6. Where they lose</h2>
+
+<p>Novel architecture is the clearest loss. Models average over what exists, and the
+part of your problem worth designing is precisely the part that does not exist yet. You
+will get a competent version of the standard answer, which is useful as a baseline and
+actively harmful if the standard answer is why you are here. Gnarly concurrency is the
+second: the failure modes are interleavings, they do not appear in the diff, and a
+confident explanation of why the lock ordering is safe is not evidence.</p>
+
+<p>Above both of those sits the real disqualifier: <strong>anything where a mistake is
+silent</strong>. If a wrong change crashes, CI catches it and you have lost minutes. If a
+wrong change produces a plausible number, nothing fires, and you find out during
+reconciliation weeks later. In that regime the review cost is unbounded, and unbounded
+review cost eats any speed gain you thought you had.</p>
+
+<p>This is the same argument as floats in money, which I keep making because it keeps
+being the same argument. The dangerous bug is not the loud one. It is the quiet one that
+looks like a result.</p>
+
+<h2>7. Guardrails are the multiplier, and they are all boring</h2>
+
+<p>Nothing on this list is new, which is the point. Types. A fast test suite. Property
+based tests for the laws your types cannot state. Linters. CI that actually blocks rather
+than politely warning. All of it existed before and was worth having before. All of it
+just got more valuable, because it converts an expensive human gate into a cheap
+automated one.</p>
+
+<p>The compiler is the cheapest reviewer you will ever hire, and it does not get tired at
+11pm. This produces a visible split in practice. A codebase with strong static guarantees
+gets far more out of agents than a dynamically typed one sitting at 40% coverage. The
+agent's error rate is roughly the same in both. The difference is entirely in whether
+your side of the loop catches it before merge or after deploy.</p>
+
+<p>If you want a lever, that is the lever. Not a better prompt. A test suite that runs in
+ninety seconds and a type system that refuses to compile the mistake.</p>
+
+<h2>8. Non-determinism is a workflow property, not a bug to fix</h2>
+
+<p>Ask twice, get different code. Both versions may pass. Both versions may be
+reasonable. They will not be the same, and no amount of prompt discipline makes them the
+same.</p>
+
+<p>Stop treating that as a defect to engineer away and start treating it as a property
+the workflow has to tolerate. Practically: pin the intent in tests, because tests are
+the only artifact that survives regeneration. Review the diff every time, including the
+fifth time you asked for something similar. And never let "it worked last time" be the
+evidence, because last time is not this time and there is no shared state between them.</p>
+
+<h2>9. What it actually costs</h2>
+
+<p>An honest accounting, because the wins above are real and so is this side of the
+ledger.</p>
+
+<ul>
+  <li><strong>Context and prompt time is real time.</strong> Some days you spend forty
+  minutes assembling constraints for a change you could have typed in twenty five. That
+  trade is worth it when the change is wide and terrible when it is narrow, and telling
+  the difference in advance takes practice.</li>
+  <li><strong>Plausible-but-wrong cleanup is the expensive failure.</strong> Not the
+  obviously broken output, which you discard in seconds. The one that is 90% right, so
+  you patch it, and the remaining 10% turns out to be an assumption baked through the
+  whole structure.</li>
+  <li><strong>Skill atrophy is a genuine risk.</strong> If you stop reading code closely
+  you stop being able to, and close reading is now the load-bearing skill. Reviewing well
+  is the practice that keeps the ability alive; accepting diffs is the practice that
+  kills it.</li>
+  <li><strong>Sunk cost applies to generated code, and it should not.</strong> This is
+  the subtlest trap. An approach arrives already written, complete, syntactically
+  confident, and that existence exerts a pull that a whiteboard sketch never did. But it
+  cost nothing to produce. Deleting 600 lines and asking again is close to free, and the
+  fact that it feels expensive is a bug in you, not a fact about the code.</li>
+</ul>
+
+<h2>The checklist</h2>
+
+<ol>
+  <li><strong>Optimise context, not prompts.</strong> Conventions written down, the
+  failing test, the exact file, the constraints that are invisible in source.</li>
+  <li><strong>Classify before you dispatch.</strong> Independent work fans out, dependent
+  work runs as a chain, and guessing wrong costs more than the work.</li>
+  <li><strong>Isolate parallel work</strong> in separate worktrees or branches. Never let
+  two agents edit the same file.</li>
+  <li><strong>Read the diff, never the summary</strong>, and treat confident prose about
+  unexecuted code as marketing.</li>
+  <li><strong>Refuse the silent-failure domains.</strong> If a mistake produces a wrong
+  number instead of a crash, the review cost eats the gain.</li>
+  <li><strong>Invest in boring guardrails.</strong> Types, fast tests, property tests,
+  blocking CI. They are what makes your side of the loop cheap.</li>
+  <li><strong>Pin intent in tests</strong>, because regeneration is non-deterministic and
+  tests are what survives it.</li>
+  <li><strong>Throw away freely.</strong> Generated code owes you nothing and you owe it
+  nothing back.</li>
+</ol>
+
+<p>The job did not get easier and it did not get automated. It got rebalanced: less time
+producing, far more time deciding what is true. Which is, if you think about it, what
+senior engineering was always mostly made of. The typing was just hiding it.</p>
+
+</article>
+
+<footer>
+  <p>Maciej Lewandowski &middot; Senior Blockchain Engineer &middot;
+  <a href="/">maciejlewandowski.dev</a> &middot;
+  <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a> &middot;
+  <a href="https://github.com/NiceLeader">GitHub</a></p>
+</footer>
+
+</div>
+</body>
+</html>

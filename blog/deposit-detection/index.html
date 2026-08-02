@@ -85,45 +85,37 @@ footer a { color: var(--accent); text-decoration: none; }
 <p class="meta">Maciej Lewandowski &middot; July 2026 &middot; Field notes from custody &amp; wallet infrastructure</p>
 
 <p>Deposit detection sounds like the easy part of a custody platform. Watch an address,
-see an incoming transaction, credit the client. Every tutorial covers it in twenty lines.</p>
+see an incoming transaction, credit the client. Every tutorial does it in twenty lines.</p>
 
-<p>Then you run it in production against real chains, real tokens and real users, and you
-discover that the naive version silently loses money. Not often, and that is exactly the
-problem: rare enough that you ship it, frequent enough that reconciliation will one day
-show a hole nobody can explain. These are the paths I have seen break, chain by chain.</p>
+<p>The twenty-line version loses money in production. Not often, and that's the trap:
+rare enough that you ship it and move on, and then one day reconciliation shows a number
+that doesn't match and nobody can say why. I've spent enough time on this class of bug to
+list the failure paths from memory, so here they are.</p>
 
-<h2>ERC-20: the transaction's <code>to</code> field lies to you</h2>
+<h2>ERC-20: stop reading <code>tx.to</code></h2>
 
-<p>The first mistake everyone makes is scanning transactions and checking <code>tx.to</code>.
-For ERC-20 deposits that field points at the token contract, not at your deposit address.
-The only reliable primitive is the <code>Transfer</code> event log, filtered by the recipient
-topic. So far, so standard. The edge cases are where deposits go missing:</p>
+<p>Everyone's first scanner checks <code>tx.to</code>. For token deposits that field points
+at the token contract, not at your deposit address, so the only thing worth indexing is the
+<code>Transfer</code> event log filtered by recipient topic. Fine. Everyone learns that in
+week one.</p>
 
-<ul>
-  <li><strong>Internal transfers.</strong> A user deposits from a smart-contract wallet
-  (Safe, an exchange's hot wallet, an aggregator route). The value movement happens inside
-  an internal call. If you only look at top-level transactions you will never see it.
-  Event logs catch ERC-20s either way, but for <em>native</em> ETH there is no log at all:
-  an internal ETH transfer to your address produces no transaction with your address in
-  <code>to</code> and no event. You need trace-level data (<code>debug_traceBlock</code>,
-  or a provider that exposes internal transfers) or you will miss real money.</li>
+<p>Week two is worse. A user deposits from a Safe or from an exchange hot wallet, and the
+value moves inside an internal call. For ERC-20 you still get the event. For native ETH you
+get nothing: no transaction with your address in <code>to</code>, no log, nothing in any of
+the places a normal scanner looks. If you're not consuming trace-level data
+(<code>debug_traceBlock</code>, or a provider that surfaces internal transfers), you are
+quietly not seeing some fraction of your ETH deposits. Today, right now, in production.</p>
 
-  <li><strong>Fee-on-transfer tokens.</strong> The <code>Transfer</code> event says 100,
-  your balance grows by 97, because the token skims a fee inside <code>transfer()</code>.
-  If you credit the event amount, you just created 3 tokens out of thin air on your ledger.
-  The fix is unglamorous: credit from the <strong>balance delta</strong>
-  (<code>balanceOf</code> before vs after, or per-block accounting), not from the event value,
-  for any token you have not explicitly whitelisted as standard.</li>
+<p>Fee-on-transfer tokens are the opposite problem. The event says 100, the balance grows
+by 97, and if you credit the event value you have just minted 3 tokens on your own ledger.
+For any token you haven't explicitly whitelisted as standard, credit the balance delta, not
+the event value. It's uglier and slower. Do it anyway.</p>
 
-  <li><strong>Proxy contracts.</strong> Most serious tokens are upgradeable proxies. The
-  address you whitelisted keeps its balance and its history, but the code behind it can
-  change on upgrade. Decode events against the implementation ABI, resolved through the
-  EIP-1967 slot, and treat an implementation change as an operational event worth alerting
-  on, because token semantics can change under your feet.</li>
-
-  <li><strong>The boring ones.</strong> USDT returns no boolean and uses 6 decimals, not 18.
-  Everyone knows. Every integration still gets bitten once.</li>
-</ul>
+<p>Two more, quickly. Most serious tokens are upgradeable proxies, so decode events against
+the implementation ABI resolved through the EIP-1967 slot, and alert when the implementation
+changes, because token semantics can change under your feet on upgrade day. And USDT: no
+return boolean, 6 decimals. Everyone knows about USDT. Every integration still gets bitten
+by USDT exactly once.</p>
 
 <div class="diagram"><svg viewBox="0 0 760 170" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Deposit pipeline: blocks scanned, pending balance, confirmed credit, with reorg path back to pending">
   <defs>
@@ -154,95 +146,67 @@ topic. So far, so standard. The edge cases are where deposits go missing:</p>
 </svg>
 </div>
 
-<h2>Confirmations: crediting is a promise you might have to break</h2>
+<h2>Confirmations</h2>
 
-<p>A deposit is not a fact when it appears in a block. It is a probability that increases
-with depth, and every chain prices that differently. Bitcoin finality is probabilistic
-(the classic 6 confirmations is a policy choice, not physics). Ethereum has explicit
-finalized checkpoints. Solana has commitment levels. And chains with fast blocks and
-probabilistic finality reorg shallowly as a matter of routine, not as a black-swan event.</p>
+<p>A deposit sitting in a block is not a fact. It's a probability that grows with depth,
+and every chain prices it differently: Bitcoin's 6 confirmations is a policy choice,
+Ethereum gives you explicit finalized checkpoints, Solana gives you commitment levels.
+Fast chains with probabilistic finality reorg shallowly all the time. That's weather,
+not a black swan.</p>
 
-<p>Two rules kept us honest:</p>
+<p>What worked for us was embarrassingly simple. Pending and confirmed are two different
+balances, and nothing is spendable until the chain-specific threshold. One threshold per
+chain, reviewed, versioned, boring.</p>
 
-<ul>
-  <li><strong>Pending and confirmed are different balances.</strong> Show the user the
-  pending deposit immediately, but nothing spendable until the chain-specific threshold.
-  One threshold per chain, reviewed, versioned, and boring.</li>
-  <li><strong>A reorg handler is not optional.</strong> When a block containing a credited
-  deposit disappears from the canonical chain, the deposit must transition backwards in its
-  state machine (confirmed &rarr; pending &rarr; possibly gone), the ledger entry must be
-  reversed by an explicit compensating entry (never an <code>UPDATE</code>), and a human
-  must be alerted. If your deposit pipeline has no backwards transition, you do not have a
-  state machine, you have a hope machine.</li>
-</ul>
+<p>The part people skip is the backwards path. When a block containing a credited deposit
+drops out of the canonical chain, the deposit has to walk backwards through its state
+machine: confirmed to pending, maybe to gone. The ledger entry gets reversed with an
+explicit compensating entry, never an <code>UPDATE</code>, and a human gets paged. If your
+pipeline has no backwards transition, it isn't a state machine. It's optimism with extra
+steps.</p>
 
-<h2>UTXO chains: deposits are outputs, not transactions</h2>
+<h2>UTXO chains</h2>
 
-<p>On Bitcoin the unit of a deposit is the UTXO, and one transaction can carry several
-outputs to the same address. Count transactions and you undercount money. Other production
-lessons from the UTXO side:</p>
+<p>On Bitcoin the unit of deposit is the output, not the transaction. One transaction can
+pay the same address three times. Count transactions and you undercount money.</p>
 
-<ul>
-  <li><strong>Dust.</strong> Outputs below the economic cost of spending them are still
-  deposits according to your naive scanner. Credit them and you have promised the client
-  money that costs more to move than it is worth. You need a dust policy, and you need it
-  before the first dusting attack, not after, because dusting is also a tracking technique
-  aimed at deanonymizing your wallet clusters.</li>
-  <li><strong>Address reuse and gap limits.</strong> HD wallets (BIP32/44) mean every client
-  gets fresh derived addresses, and your scanner must respect the gap limit or it will stop
-  watching addresses the wallet already handed out.</li>
-  <li><strong>Sweeping changes the picture.</strong> The deposit lands on the client's
-  derived address, then ops sweeps it to hot or cold storage. Ledger-wise these are two
-  different events, and if reconciliation compares client balances against on-chain balances
-  of deposit addresses, sweeping makes everything look wrong unless the model knows about it.</li>
-</ul>
+<p>Dust is nastier than it looks. Sub-economic outputs are technically deposits, so the
+naive scanner credits them, and now you've promised a client money that costs more to move
+than it's worth. You want a dust policy before your first dusting attack, not after,
+because dusting doubles as a deanonymization probe against your wallet clusters.</p>
 
-<h2>Solana: the deposit does not go where you think</h2>
+<p>The rest of the UTXO list: HD wallets (BIP32/44) mean fresh derived addresses per client
+and a gap limit your scanner must respect, or it silently stops watching addresses the
+wallet already handed out. And once ops sweeps deposits to hot or cold storage, the
+on-chain balances of deposit addresses stop matching client balances. Reconciliation has to
+model the sweep as its own event or everything looks broken at once.</p>
 
-<p>SPL token deposits do not credit the client's main address. They credit an Associated
-Token Account, a separate address derived from the owner, the token program and the mint.
-The deposit transaction may
-even <em>create</em> that account on the fly. A scanner built on EVM assumptions, watching
-the owner address for incoming value, sees nothing at all. You watch token accounts, you
-resolve their owners, and you pick a commitment level (<code>confirmed</code> vs
-<code>finalized</code>) with the same care you pick confirmation thresholds elsewhere.</p>
+<h2>Solana</h2>
 
-<h2>The only real fix: reconciliation as a continuous process</h2>
+<p>SPL deposits don't land on the client's address. They land on an Associated Token
+Account, a separate address derived from the owner, the token program and the mint, and
+the deposit transaction may create that account on the fly. A scanner written with EVM
+instincts, watching the owner address for incoming value, sees literally nothing. Watch
+token accounts, resolve their owners, and pick <code>confirmed</code> vs
+<code>finalized</code> as deliberately as you pick confirmation depths anywhere else.</p>
 
-<p>Every mechanism above will still occasionally miss. A provider webhook drops a block.
-A token does something creative. An engineer whitelists a chain with the wrong threshold.
-The systems that survive audits are not the ones with the cleverest scanner. They are the
-ones where an independent process continuously compares the internal ledger against
-on-chain reality and refuses to stay quiet about drift:</p>
+<h2>Reconciliation is the actual product</h2>
 
-<div class="callout">
-Ledger balance and chain balance are two different measurements of the same claim.
-Reconciliation is the discipline of checking that claim all day, every day, per asset,
-per address, with alerting wired to a human. Batch reconciliation at end of day is how
-you find out about a hole twelve hours late.
-</div>
+<p>Every mechanism above still misses occasionally. A webhook drops a block. A token does
+something creative. Someone whitelists a new chain with the wrong threshold.</p>
 
-<p>And the ledger itself: double-entry, append-only, balances derived as sums of entries.
-Never <code>UPDATE balance</code>. When (not if) a deposit path misbehaves, an append-only
-ledger means you can prove exactly what happened and correct it with a compensating entry.
-A mutable balance column means you get to explain to an auditor why the number is what it
-is, with no history to back you up.</p>
+<p>The custody systems that survive audits are not the ones with the cleverest scanner.
+They're the ones where an independent process compares the internal ledger against
+on-chain reality all day, per asset, per address, and refuses to stay quiet about drift.
+Batch reconciliation at end of day means finding out about a hole twelve hours late.</p>
 
-<h2>A checklist, if you are building this</h2>
+<p>And underneath all of it: double-entry, append-only, balances derived as sums of
+entries. When a deposit path misbehaves - when, not if - an append-only ledger lets you
+prove exactly what happened and correct it with a compensating entry. A mutable balance
+column leaves you explaining a number to an auditor with no history behind it.</p>
 
-<ol>
-  <li>ERC-20 by <code>Transfer</code> logs, native coin by traces, never by <code>tx.to</code> alone.</li>
-  <li>Credit unknown tokens by balance delta, not event value.</li>
-  <li>Resolve proxies via EIP-1967; alert on implementation changes.</li>
-  <li>Per-chain confirmation thresholds; pending vs confirmed as separate balances.</li>
-  <li>Deposit state machine with backwards transitions for reorgs.</li>
-  <li>UTXO: track outputs, enforce a dust policy, respect gap limits, model sweeps.</li>
-  <li>Solana: watch ATAs, not owner addresses.</li>
-  <li>Continuous reconciliation with human alerting, on an append-only double-entry ledger.</li>
-</ol>
-
-<p>None of this is exotic. All of it is the difference between a demo and a custody
-platform that a regulated institution can put real balances on.</p>
+<p>None of this is exotic. It's just the difference between a demo and something a
+regulated institution can put real balances on.</p>
 
 </article>
 

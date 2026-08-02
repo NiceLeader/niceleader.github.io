@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>You Are Overfitting Your Training the Same Way You Overfit a Backtest - Maciej Lewandowski</title>
+<meta name="description" content="Noise floors, regression to the mean, survivorship bias and parameter search on n=1: reading a training log the way you would read a production time series.">
+<link rel="canonical" href="https://maciejlewandowski.dev/blog/training-data-noise/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="You Are Overfitting Your Training the Same Way You Overfit a Backtest">
+<meta property="og:description" content="A statistics and systems piece that happens to use the gym as the dataset: why almost every conclusion drawn from a training log is a measurement of noise.">
+<meta property="og:url" content="https://maciejlewandowski.dev/blog/training-data-noise/">
+<meta property="og:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "You Are Overfitting Your Training the Same Way You Overfit a Backtest",
+  "datePublished": "2026-07-25",
+  "author": { "@type": "Person", "name": "Maciej Lewandowski", "url": "https://maciejlewandowski.dev/" },
+  "publisher": { "@type": "Person", "name": "Maciej Lewandowski" },
+  "mainEntityOfPage": "https://maciejlewandowski.dev/blog/training-data-noise/"
+}
+</script>
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f6f8fa; --fg: #1f2328; --fg2: #59636e;
+  --accent: #0969da; --border: #d1d9e0; --code: #f6f8fa;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --fg: #e6edf3; --fg2: #9198a1;
+    --accent: #58a6ff; --border: #30363d; --code: #161b22;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--fg); line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+nav { padding: 28px 0; }
+nav a { color: var(--fg2); text-decoration: none; font-size: 0.95rem; }
+nav a:hover { color: var(--accent); }
+article { padding: 16px 0 64px; }
+h1 { font-size: 2.1rem; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
+.meta { color: var(--fg2); font-size: 0.92rem; margin-bottom: 36px; }
+h2 { font-size: 1.4rem; margin: 40px 0 14px; letter-spacing: -0.01em; }
+p { margin-bottom: 18px; }
+ul, ol { margin: 0 0 18px 26px; }
+li { margin-bottom: 8px; }
+code {
+  background: var(--code); border: 1px solid var(--border); border-radius: 5px;
+  padding: 2px 6px; font-size: 0.88em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+strong { font-weight: 600; }
+.callout {
+  border-left: 3px solid var(--accent); background: var(--bg2);
+  padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 18px; color: var(--fg);
+}
+footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
+footer a { color: var(--accent); text-decoration: none; }
+.diagram { margin: 8px 0 26px; }
+.diagram svg { width: 100%; height: auto; display: block; }
+@media (max-width: 760px) {
+  .diagram { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .diagram svg { width: auto; height: 190px; }
+}
+</style>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
+</head>
+<body>
+<div class="wrap">
+
+<nav><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/blog/">All posts</a></nav>
+
+<article>
+<h1>You Are Overfitting Your Training the Same Way You Overfit a Backtest</h1>
+<p class="meta">Maciej Lewandowski &middot; July 2026 &middot; Engineering notes</p>
+
+<p>I keep a training log for the same reason I keep metrics on a service: I do not trust my
+memory, and a number written down at the time beats a feeling recalled later. What I did not
+expect was how fast that log started producing the exact class of wrong conclusion I spend my
+working hours preventing in a production time series.</p>
+
+<p>So this is not a training article. It is an article about a small, noisy dataset that I
+happen to generate with a barbell, and about the fact that almost every failure mode in it has
+a twin in quantitative finance. If you have ever shipped a strategy that looked magnificent in
+simulation and did nothing live, you already know this material. You have just never pointed it
+at yourself.</p>
+
+<h2>Your log is a time series with n = 1 and no control group</h2>
+
+<p>The structural problem comes first, because everything else is downstream of it. You cannot
+run the counterfactual. You will never know what the other program would have done to the same
+you, in the same year, with the same sleep and the same job stress. One subject, one arm, no
+randomization, no blinding, and an experimenter who is also the subject and badly wants a
+particular answer.</p>
+
+<p>Every conclusion you draw is therefore a single realization of a noisy process: a sample of
+size one from a distribution you have never seen the shape of. "This program worked for me" is
+a true statement about what happened and a nearly worthless statement about what caused it.</p>
+
+<h2>The noise floor is larger than the weekly signal</h2>
+
+<p>Now the measurement problem. Day-to-day performance moves with sleep, hydration, food
+timing, stress, caffeine, ambient temperature, time of day and where you happen to be in the
+week. Stack those together and the spread between a good day and a bad day routinely exceeds
+the real strength gained over that entire week. The signal you are trying to read sits under
+the noise, not above it.</p>
+
+<p>Then add instrument error, which people forget entirely. RPE is a subjective sensor with a
+drifting calibration. Bar speed is not measured, it is guessed at from the inside, which is the
+worst available vantage point. "One more rep in the tank" is an estimate produced by a tired
+person with an opinion about how the session should be going. These are not bad tools, just
+noisy ones, and sensor noise adds to plant noise.</p>
+
+<p>The consequence is uncomfortable: <strong>a single bad session carries almost no
+information</strong>. It is exactly what you should expect several times a month from a process
+this variable. And it is, reliably, the data point people act on.</p>
+
+<h2>Program hopping is parameter search on noise</h2>
+
+<p>Here is where it becomes the same article I already wrote about markets. Changing your
+program every four weeks on four data points is structurally identical to running two hundred
+parameter combinations over a price series and shipping the best equity curve. You are not
+selecting on effect, you are <a href="/blog/backtest-lies/">selecting on variance</a>, and the
+more configurations you try, the higher the best observed result you should expect from chance
+alone.</p>
+
+<p>The cruel part is the feedback. The switch is very often followed by improvement, which
+feels like confirmation and gets logged as such. It is not confirmation. It is the next
+section.</p>
+
+<div class="diagram"><svg viewBox="0 0 760 230" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="A chart showing a noisy zig-zag line of weekly measurements with a smooth rising trend line through it. An arrow points at a local dip in the noisy line labelled you change your program here, and a label near the trend line reads the only thing that was ever real.">
+  <defs>
+    <marker id="tip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/>
+    </marker>
+    <marker id="axis" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+  </defs>
+
+  <line x1="56" y1="26" x2="56" y2="192" style="stroke:var(--fg2)"/>
+  <line x1="56" y1="192" x2="738" y2="192" style="stroke:var(--fg2)" marker-end="url(#axis)"/>
+  <text x="30" y="112" text-anchor="middle" transform="rotate(-90 30 112)" style="fill:var(--fg2)">performance</text>
+  <text x="396" y="216" text-anchor="middle" style="fill:var(--fg2)">weeks</text>
+
+  <polyline fill="none" style="stroke:var(--fg2);opacity:0.65" stroke-width="1"
+    points="70,176 95,152 120,174 145,149 170,169 195,133 220,153 245,123 270,154 295,122 320,142 345,110 370,129 395,95 420,143 445,95 470,117 495,82 520,104 545,72 570,102 595,68 620,89 645,57 670,79 695,53"/>
+
+  <path d="M 70 168 C 240 143, 480 100, 695 63" fill="none" style="stroke:var(--accent)" stroke-width="2.5"/>
+
+  <text x="238" y="42" text-anchor="middle" style="fill:var(--accent)">you change your program here</text>
+  <path d="M 300 52 C 350 74, 386 104, 412 132" fill="none" style="stroke:var(--accent)" stroke-dasharray="5 4" marker-end="url(#tip)"/>
+  <circle cx="420" cy="143" r="3.5" style="fill:var(--accent)"/>
+
+  <text x="610" y="162" text-anchor="middle" style="fill:var(--accent)">the only thing that was ever real</text>
+  <path d="M 612 148 C 606 126, 602 104, 600 86" fill="none" style="stroke:var(--accent);opacity:0.7" stroke-dasharray="4 3"/>
+</svg>
+</div>
+
+<h2>Regression to the mean explains most breakthroughs and most crises</h2>
+
+<p>If a week was unusually bad, the most likely reason is that several independent noise terms
+landed on the same side at once, and the most likely next week is closer to average. Not
+because anything healed, and not because of whatever you changed on Sunday night. Because
+extreme draws from a noisy distribution are, by construction, usually followed by less extreme
+ones.</p>
+
+<p>The same mechanism runs in the other direction, and that is the one nobody wants. An unusually
+good week is also mostly noise, and it will also come down. Whatever you happened to be doing in
+between collects the credit or the blame in both cases. Neither inference has any content.</p>
+
+<div class="callout">
+Regression to the mean is the single most useful statistical idea available to anyone who
+trains, and the reason is blunt: it is the default explanation for the two events that trigger
+the most decisions. Before you attribute a bounce-back to your intervention, ask what the
+bounce-back would have looked like if you had done nothing at all. Usually: about the same.
+</div>
+
+<h2>Survivorship bias in training advice</h2>
+
+<p>You hear from the people the program worked for. That is not a mild bias, it is the entire
+selection rule. The lifters who stalled, got hurt or quit do not write the retrospective and do
+not post the log, so the visible sample has been filtered on exactly the outcome you are trying
+to predict. Five enthusiastic write-ups tell you five people liked it. They tell you nothing
+about the denominator.</p>
+
+<p>Elite-athlete programming is the extreme case. Those templates are the surviving output of a
+brutal filter: genetic outliers who also happened to tolerate very high volume, selected out of
+a much larger pool who did not and left the sport. Copying the program copies the treatment
+without copying the selection, which is the same error as backtesting today's index
+constituents and calling the result alpha.</p>
+
+<h2>What actually carries signal</h2>
+
+<p>Everything above is an argument for longer windows and aggregates. The daily numbers are
+not wrong, they are just mostly variance, and variance shrinks when you sum or average it.
+What survives the noise floor:</p>
+
+<ul>
+  <li><strong>Estimated 1RM trends over months</strong>, not weeks. A monthly aggregate has
+  enough sessions behind it to average out the bad days; a weekly one does not.</li>
+  <li><strong>Total tonnage, or hard sets per muscle group per week</strong>, read as a moving
+  average. This is your actual dose variable, and the one people track least.</li>
+  <li><strong>Bodyweight as a 7-day mean.</strong> Daily bodyweight is dominated by water,
+  glycogen and gut contents. The 7-day mean is a measurement; a single morning reading is a
+  mood.</li>
+  <li><strong>Sleep as a rolling average</strong>, because one short night is an event and a
+  fortnight of short nights is a state, and only the second one is steering information.</li>
+</ul>
+
+<p>That gives a single rule that does most of the work: <strong>if a metric can swing
+meaningfully between Tuesday and Thursday, it is not a metric you steer by.</strong> Look at
+it, log it, do not turn the wheel on it.</p>
+
+<h2>Autoregulation is closed-loop control</h2>
+
+<p>Fixed-percentage programming is open loop. It computes today's prescription from a number
+you measured weeks ago and assumes the plant responds identically every day, which we have
+already established it does not. There is no feedback path at all: the controller cannot see
+the output it is producing.</p>
+
+<p>RPE and RIR-based autoregulation closes the loop: the setpoint moves with today's readiness,
+which is what you want when the plant's gain varies with sleep and stress. Worth being precise
+about the size of the claim, though. The sensor is subjective and noisy, so this is a controller
+with a bad sensor, not a good one. That still beats no controller, on one condition - you must
+not chase every wobble. A high-gain controller reading a noisy sensor oscillates. Deloads and
+long averaging windows are the low-pass filter that keeps the loop stable.</p>
+
+<h2>Progressive overload is constrained optimization</h2>
+
+<p>The objective is adaptation. The constraint is a recovery budget that is itself a function of
+sleep, stress, calories and time, and which you do not get to set. Most training arguments are
+really arguments about the shape of that constraint, conducted by people who have not noticed
+it is a constraint.</p>
+
+<p>The modelling detail that matters: it behaves like a hard constraint, not a soft penalty.
+Overshoot a soft penalty and the objective degrades a little. Overshoot this one and the
+objective collapses - the trajectory stops rather than dips, and you spend a while optimizing a
+different problem. An optimizer that treats a hard constraint as soft walks straight off the
+edge of the feasible region.</p>
+
+<h2>The honest ending: the data is mostly for adherence</h2>
+
+<p>Here is the part that undercuts everything above, and I think it is the true part. The log
+does not work because the analysis is clever. It works because writing it down forces
+consistency and stops you being stupid, and those two effects dwarf every insight you will ever
+extract from the numbers.</p>
+
+<p>Over a five-year horizon the variable that dominates every model is how many sessions you
+actually did, and it is not close. Program selection, periodization scheme and exercise order
+all compete for the residual left after attendance has taken its share. No dashboard has ever
+improved attendance. Showing up improves attendance.</p>
+
+<div class="callout">
+This is the same lesson as a codebase, stated in a different unit. The sophisticated tooling
+matters far less than doing the boring thing consistently for years. A test suite nobody runs,
+a metrics stack nobody reads and a training log nobody acts on all fail identically: the
+instrumentation was never the bottleneck.
+</div>
+
+<h2>The checklist</h2>
+
+<ol>
+  <li>Do not change a program on fewer than eight to twelve weeks of data. Four weeks is four
+  data points from a process whose noise exceeds its weekly drift.</li>
+  <li>Judge by monthly aggregates, never by individual sessions.</li>
+  <li>Average bodyweight over seven days. Treat the daily number as an input to the average and
+  nothing else.</li>
+  <li>Expect regression to the mean after any extreme week, in both directions, and refuse to
+  attribute it to whatever you changed.</li>
+  <li>Treat a bad session as noise until it has repeated enough times to be a trend.</li>
+  <li>Change one variable at a time, or you have learned nothing about which one moved the
+  result.</li>
+  <li>Track the dose variable, hard sets or tonnage per week, as a moving average. It is the
+  input; everything else is output.</li>
+  <li>Remember that consistency dominates every other term in the model, and optimize that
+  first.</li>
+</ol>
+
+<p>None of this makes a training log true. It makes it falsifiable, which is the most a
+single-subject record can offer. The smooth trend line is the hypothesis, the noisy one
+underneath is what you actually measured, and the discipline is refusing to act on the
+difference until it has survived a few more months of not going away.</p>
+
+</article>
+
+<footer>
+  <p>Maciej Lewandowski &middot; Senior Blockchain Engineer &middot;
+  <a href="/">maciejlewandowski.dev</a> &middot;
+  <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a> &middot;
+  <a href="https://github.com/NiceLeader">GitHub</a></p>
+</footer>
+
+</div>
+</body>
+</html>

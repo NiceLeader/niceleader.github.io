@@ -85,105 +85,98 @@ the three chain families where "stuck" means three different things.</p>
 
 <h2>Why transactions get stuck at all</h2>
 
-<ul>
-  <li><strong>The fee market moved.</strong> You priced for the mempool at signing time;
-  ten minutes later a burst of activity repriced everything above you.</li>
-  <li><strong>Mempool eviction.</strong> Bitcoin mempools are bounded; when they fill,
-  the lowest-feerate transactions are dropped silently. Your transaction did not fail,
-  it just stopped existing everywhere except your database.</li>
-  <li><strong>Queue effects.</strong> On Ethereum, an account's transactions confirm in
-  nonce order. One underpriced transaction dams the whole river behind it.</li>
-  <li><strong>Expiry.</strong> On Solana a transaction references a recent blockhash
-  and dies after roughly 150 slots. Stuck resolves itself into dead, which is cleaner,
-  but only if your system models it.</li>
-</ul>
+<p>The first cause is the fee market moving under you. You priced for the mempool at
+signing time; ten minutes later a burst of activity repriced everything above you. The
+second is eviction. Bitcoin mempools are bounded, and when they fill, nodes drop the
+lowest-feerate transactions without telling anyone. Your transaction did not fail, it
+stopped existing everywhere except your database.</p>
+
+<p>Then there are queue effects. On Ethereum, an account's transactions confirm in
+nonce order, so one underpriced transaction blocks the entire account behind it. And
+there is expiry: on Solana a transaction references a recent blockhash and dies after
+roughly 150 slots. Stuck turns into dead, which is cleaner, but only if your system
+models it.</p>
 
 <h2>Bitcoin: RBF, CPFP, and who controls the remedy</h2>
 
-<p><strong>Replace-by-fee</strong> rebuilds the same payment with a higher fee. The
-replacement must generally pay for what it displaces (the BIP-125 rules), and since
-every signature commits to the transaction, RBF means re-signing. That is fine when
-the transaction is entirely yours. It stops being fine the moment other parties
-contributed inputs: their signatures die with the replacement, and your remediation now
-has a human coordination step in it.</p>
+<p><strong>Replace-by-fee</strong> rebuilds the same payment with a higher fee. Under
+the BIP-125 rules the replacement must pay for what it displaces, and since every
+signature commits to the transaction, RBF means re-signing. That works when the
+transaction is entirely yours. Once other parties have contributed inputs, their
+signatures die with the replacement, and your remediation now has a human coordination
+step in it.</p>
 
 <p><strong>Child-pays-for-parent</strong> attacks the problem from the other side:
 spend an output of the stuck transaction (typically your change) with a generously
 overpaying child. Miners evaluate the pair as a package, the ancestor feerate rises,
-both confirm. No re-signing, no counterparties, no permission needed. Which is why the
-practical rule is:</p>
+both confirm. You skip the re-signing, you involve no counterparties, and you ask
+nobody for permission. That asymmetry gives you the practical rule:</p>
 
 <div class="callout">
-RBF when the transaction is entirely yours and cheap coordination is possible. CPFP
-when anyone else signed it, when the signing path is slow or cold, or when you simply
-need a remedy that depends on nobody. Design wallets so that CPFP is always available:
-always leave yourself a spendable output.
+RBF when the transaction is entirely yours and coordination is cheap. CPFP when anyone
+else signed it, when the signing path is slow or cold, or when you need a remedy that
+depends on nobody. Design wallets so that CPFP stays available: leave yourself a
+spendable output on every transaction.
 </div>
 
 <p><strong>Pinning</strong> is the adversarial version. Package rules cut both ways: a
 counterparty who owns an output of your transaction can attach a large, low-feerate
-child, making replacement prohibitively expensive under the "pay for what you displace"
-rule, and the package unattractive to miners. The transaction is frozen in public view.
-Protocols that live and die by timely confirmation (Lightning, most visibly) evolved
-anchor outputs and package-relay improvements specifically to shrink this attack
-surface. If your flows include transactions co-signed with parties you do not fully
-trust, pinning belongs in your threat model, and "wait for mempool expiry, around two
-weeks by default" belongs in your expectations.</p>
+child, which makes replacement too expensive under the "pay for what you displace"
+rule and the package unattractive to miners. Your transaction sits frozen in public
+view. Protocols that depend on timely confirmation (Lightning, most visibly) grew
+anchor outputs and package-relay improvements to shrink this attack surface. If your
+flows include transactions co-signed with parties you do not fully trust, put pinning
+in your threat model, and put "wait for mempool expiry, around two weeks by default"
+in your expectations.</p>
 
 <h2>Ethereum: it is always the nonce</h2>
 
-<p>EVM remediation is mechanically simpler and operationally trickier:</p>
+<p>EVM remediation is mechanically simpler and operationally trickier. You have two
+moves. To speed a transaction up, resend the same nonce and payload with higher fees;
+nodes demand a meaningful bump (conventionally at least 10%) before they replace the
+pending transaction. To cancel, send a zero-value self-transfer at the same nonce with
+higher fees. You are buying the nonce back.</p>
 
-<ul>
-  <li><strong>Speed-up:</strong> same nonce, same payload, higher fees. Nodes demand a
-  meaningful bump (conventionally at least 10%) to replace the pending transaction.</li>
-  <li><strong>Cancel:</strong> same nonce, zero-value self-transfer, higher fees. You
-  are buying the nonce back.</li>
-  <li><strong>The queue is the real system.</strong> Remediating transaction N is
-  pointless if N-1 is the stuck one, and a nonce gap (say, after a crashed signer
-  burned a nonce that never reached the network) silently freezes an entire account.
-  Monitoring must think in accounts and gaps, not in individual transactions.</li>
-  <li><strong>EIP-1559 makes one failure mode gentler:</strong> set a generous max fee
-  and the transaction rides the base fee down without overpaying, since the base fee is
-  burned and refunds the difference. Underpriced priority tips still strand you in a
-  busy mempool.</li>
-</ul>
+<p>The queue deserves more of your attention than any single transaction. Remediating
+transaction N is pointless if N-1 is the stuck one, and a nonce gap (say, after a
+crashed signer burned a nonce that never reached the network) freezes an entire
+account without a single error surfacing. Monitoring must think in accounts and gaps,
+not in individual transactions. EIP-1559 makes one failure mode gentler: set a
+generous max fee and the transaction rides the base fee down without overpaying, since
+the protocol burns the base fee and refunds the difference. An underpriced priority tip still
+strands you in a busy mempool.</p>
 
-<h2>Solana: stuck is temporary, dead is forever</h2>
+<h2>Solana: expiry does the cleanup for you</h2>
 
-<p>Blockhash expiry means Solana rarely has zombie transactions; it has ambiguous
-ones. The dangerous window is between expiry-as-observed and expiry-as-fact: resubmit
-a "dead" transaction's intent as a new transaction too eagerly, and if the original
-squeaked in at the boundary you have paid twice. The discipline is the same as
-everywhere else, just compressed in time: track the transaction by signature until its
-blockhash is provably expired, then and only then rebuild with a fresh blockhash under
-the same idempotency key. For signing flows too slow for a 60-90 second window (cold
-storage, multi-approval), durable nonces exist precisely to opt out of expiry.</p>
+<p>Blockhash expiry means Solana trades zombie transactions for ambiguous ones. The
+dangerous window sits between expiry-as-observed and expiry-as-fact: if you resubmit
+a "dead" transaction's intent as a new transaction too eagerly, and the original
+squeaked in at the boundary, you have paid twice. You apply the same discipline as
+everywhere else, compressed in time: track the transaction by signature until you can
+prove its blockhash expired, and only then rebuild with a fresh blockhash under the
+same idempotency key. For signing flows too slow for a 60-90 second window (cold
+storage, multi-approval), durable nonces let you opt out of expiry.</p>
 
-<h2>The ops layer: remediation is a policy, not a heroic act</h2>
+<h2>The ops layer: wiring remediation to policy</h2>
 
-<p>Every remediation above is mechanical. What separates calm systems from noisy ones
-is that the mechanics are wired to policy instead of adrenaline:</p>
+<p>Each remediation above is mechanical, and the teams who run calm systems have wired
+those mechanics to policy instead of adrenaline. Start with age alarms per state and
+per chain: a transaction pending longer than its chain's expected profile goes up for
+evaluation before anyone has noticed a problem. Add automatic fee-bumps within bounds,
+where policy defines the bump curve and the ceiling. Below the ceiling, no human is
+involved. At the ceiling, a human decides, with context in front of them.</p>
 
-<ol>
-  <li><strong>Age alarms per state, per chain.</strong> A transaction pending longer
-  than its chain's expected profile triggers evaluation, automatically.</li>
-  <li><strong>Automatic fee-bumps within bounds.</strong> Policy defines the bump curve
-  and the ceiling. Below the ceiling, no human is involved. At the ceiling, a human
-  decides, with context in front of them.</li>
-  <li><strong>Idempotency keys survive remediation.</strong> Replacement, cancel and
-  rebuild all inherit the original intent's key. The client asked to withdraw once;
-  the ledger must agree regardless of how many transactions it took.</li>
-  <li><strong>REPLACED and EXPIRED are first-class states</strong>, so monitoring
-  reports remediation as progress, not as a fresh incident.</li>
-  <li><strong>Nothing settles on broadcast.</strong> The stuck window is exactly why
-  crediting, reporting and client notification key off confirmations, never off
-  submission.</li>
-</ol>
+<p>Idempotency keys must survive remediation, so replacement, cancel and rebuild all
+inherit the original intent's key. The client asked to withdraw once, and the ledger
+must agree regardless of how many transactions it took. Make REPLACED and EXPIRED
+first-class states, so monitoring reports remediation as progress rather than as a
+fresh incident. And settle nothing on broadcast: the stuck window is the reason
+crediting, reporting and client notification key off confirmations, never off
+submission.</p>
 
-<p>Stuck transactions are not edge cases. They are weather. Systems that treat them as
-storms stay in firefighting mode forever; systems that treat them as Tuesday build the
-umbrella into the architecture.</p>
+<p>Stuck transactions are weather, not edge cases. Treat them as storms and you stay
+in firefighting mode; treat them as Tuesday and you build the umbrella into the
+architecture.</p>
 
 </article>
 

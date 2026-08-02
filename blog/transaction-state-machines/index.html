@@ -84,25 +84,26 @@ footer a { color: var(--accent); text-decoration: none; }
 <h1>Transaction State Machines for Multi-Chain Custody: What Actually Breaks</h1>
 <p class="meta">Maciej Lewandowski &middot; July 2026 &middot; Field notes from custody &amp; wallet infrastructure</p>
 
-<p>Every wallet backend has a transaction status column. Very few have a transaction
-state machine. The difference shows up the first time a chain does something the happy
-path did not anticipate, which on real chains is roughly every week.</p>
+<p>Most wallet backends I have worked on keep a transaction status column. Few of them
+keep a transaction state machine. You notice the difference the first time a chain does
+something the happy path did not anticipate, and on real chains that happens about once
+a week.</p>
 
 <p>A status column answers "what is it now". A state machine answers three harder
 questions: which transitions are legal, what triggers them, and what happens when the
-world moves backwards. In custody, where every transition can move client money, those
-questions are the system.</p>
+world moves backwards. In custody, where a single transition can move client money, you
+want all three answered before you trust the system with a withdrawal.</p>
 
-<h2>The states you actually need</h2>
+<h2>The states you need</h2>
 
-<p>The shape that has survived contact with BTC, EVM chains and Solana looks roughly
+<p>The shape I have seen survive contact with BTC, EVM chains and Solana looks roughly
 like this:</p>
 
 <p><code>CREATED &rarr; POLICY_APPROVED &rarr; SIGNED &rarr; BROADCAST &rarr; PENDING &rarr;
 CONFIRMED(n) &rarr; FINALIZED</code></p>
 
 <p>with exits to <code>FAILED</code>, <code>REPLACED</code> and <code>EXPIRED</code>,
-and one deliberately uncomfortable arrow: <code>CONFIRMED &rarr; PENDING</code>, for reorgs.</p>
+and one uncomfortable arrow I keep on purpose: <code>CONFIRMED &rarr; PENDING</code>, for reorgs.</p>
 
 <div class="diagram"><svg viewBox="0 0 930 250" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Transaction state machine with forward flow, exit states and a backwards reorg transition">
   <defs>
@@ -150,41 +151,41 @@ and one deliberately uncomfortable arrow: <code>CONFIRMED &rarr; PENDING</code>,
 </svg>
 </div>
 
-<p>A few of these deserve defending:</p>
+<p>A few of these deserve defending.</p>
 
-<ul>
-  <li><strong>POLICY_APPROVED is a separate state, before SIGNED.</strong> Policy
-  evaluation (limits, allowlists, quorum) happens before a key is ever touched, and the
-  approval is recorded as its own transition with its own audit entry. If policy and
-  signing are one step, you cannot prove to an auditor which rule approved a transfer,
-  and you cannot fail closed cleanly when the policy engine is down.</li>
-  <li><strong>BROADCAST and PENDING are different states.</strong> Broadcast means "we
-  handed the transaction to a node". Pending means "the network acknowledges it exists".
-  Between the two, transactions get dropped silently: the node was behind, the mempool
-  evicted it for low fees, the RPC provider accepted it and lost it. If your system
-  treats broadcast as success, these transactions simply vanish from your books while
-  the signed bytes still exist and can confirm later. That combination is how you get
-  a withdrawal that pays out twice.</li>
-  <li><strong>CONFIRMED is parameterized, FINALIZED is policy.</strong> Confirmations
-  accumulate differently per chain: depth on Bitcoin, finalized checkpoints on Ethereum,
-  commitment levels on Solana. FINALIZED is where your business logic says "this can
-  never come back". That threshold is a per-chain policy decision that belongs in
-  reviewed configuration, not in an engineer's head.</li>
-  <li><strong>REPLACED is a real state, not an error.</strong> Fee-bumping (RBF on
-  Bitcoin, same-nonce replacement on Ethereum) produces a new transaction that competes
-  with the old one. Both exist until one confirms. Model the pair explicitly, or your
-  monitoring will report a phantom failure every time remediation does its job.</li>
-</ul>
+<p>POLICY_APPROVED sits before SIGNED as its own state. The policy engine evaluates
+limits, allowlists and quorum before anyone touches a key, and you record the approval
+as its own transition with its own audit entry. If you fold policy and signing into one
+step, you cannot prove to an auditor which rule approved a transfer, and you cannot fail
+closed cleanly when the policy engine is down.</p>
 
-<h2>Backwards transitions, or: reorgs are not exceptional</h2>
+<p>BROADCAST and PENDING are different states. Broadcast means "we handed the
+transaction to a node". Pending means "the network acknowledges it exists". Between the
+two, transactions get dropped with no error: the node was behind, the mempool evicted it
+for low fees, the RPC provider accepted it and lost it. If your system treats broadcast
+as success, these transactions vanish from your books while the signed bytes still exist
+and can confirm later, which is how you end up paying one withdrawal twice.</p>
 
-<p>The transition everyone forgets is the one that goes backwards. A block containing
+<p>CONFIRMED is parameterized and FINALIZED is policy. Confirmations accumulate
+differently per chain: depth on Bitcoin, finalized checkpoints on Ethereum, commitment
+levels on Solana. FINALIZED is where your business logic says "this can never come
+back". That threshold is a per-chain policy decision, so keep it in reviewed
+configuration where an auditor can see it, rather than in an engineer's head.</p>
+
+<p>REPLACED is a real state rather than an error. Fee-bumping (RBF on Bitcoin,
+same-nonce replacement on Ethereum) produces a new transaction that competes with the
+old one. Both exist until one confirms. Model the pair, or your monitoring will report
+a phantom failure every time a fee bump does its job.</p>
+
+<h2>Backwards transitions: reorgs happen</h2>
+
+<p>The transition teams forget is the one that goes backwards. A block containing
 your confirmed transaction can stop being part of the canonical chain. On fast chains
 with probabilistic finality this is routine; on Bitcoin it is rare but priced in; on
-Ethereum it is bounded by the finalized checkpoint. When it happens, the transaction
-must walk back to PENDING, any ledger effect must be reversed with a compensating entry
+Ethereum it is bounded by the finalized checkpoint. When it happens, you walk the
+transaction back to PENDING, you reverse any ledger effect with a compensating entry
 (append-only ledgers make this provable, mutable balance columns make it archaeology),
-and someone should be paged.</p>
+and you page someone.</p>
 
 <div class="callout">
 A state machine with no backwards transitions is a statement of faith that the chain
@@ -193,65 +194,59 @@ will never disagree with your database. The chain will disagree with your databa
 
 <h2>Idempotency is the other half of the design</h2>
 
-<p>Most real incidents are not exotic chain behaviour. They are retries. A timeout on
-broadcast, an operator clicking again, a queue redelivering a message. Every one of
-those must be safe, which means:</p>
+<p>Most of the real incidents I have seen were retries rather than exotic chain
+behaviour: a timeout on broadcast, an operator clicking again, a queue redelivering a
+message. Each of those has to be safe, which means:</p>
 
 <ul>
-  <li><strong>Every transition is idempotent.</strong> Applying "mark as broadcast"
-  twice results in one state change and one audit entry, not two.</li>
-  <li><strong>Every externally-triggered action carries an idempotency key.</strong>
-  A withdrawal request that arrives twice, through any path, produces one transaction.
-  The dedup happens at the boundary, on a key the client controls, stored with the
-  transaction itself.</li>
-  <li><strong>Signing is exactly-once by construction.</strong> The signed payload is
-  persisted before broadcast. A retry re-broadcasts the same bytes; it never re-signs.
-  Re-signing on retry is how you end up with two valid competing transactions and, on
-  UTXO chains, a very educational afternoon.</li>
+  <li>Transitions are idempotent. Applying "mark as broadcast" twice results in one
+  state change and one audit entry.</li>
+  <li>Externally-triggered actions carry an idempotency key, so a withdrawal request
+  that arrives twice, through any path, produces one transaction. You dedup at the
+  boundary, on a key the client controls, stored with the transaction itself.</li>
+  <li>Signing is exactly-once by construction. You persist the signed payload before
+  broadcast, and a retry re-broadcasts the same bytes without re-signing. Re-sign on
+  retry and you get two valid competing transactions; on UTXO chains that means
+  competing spends of the same inputs.</li>
 </ul>
 
 <h2>Where each chain bends the model</h2>
 
-<ul>
-  <li><strong>Ethereum: the nonce queue.</strong> Transactions from one address confirm
-  in nonce order. One underpriced transaction blocks everything behind it, so "stuck"
-  is contagious. The state machine needs a per-account view, not just per-transaction:
-  remediation of transaction N is meaningless if N-1 is the one that is stuck.</li>
-  <li><strong>Solana: transactions expire.</strong> A transaction references a recent
-  blockhash and dies after roughly 150 slots if unconfirmed. EXPIRED is a first-class
-  terminal state, and the retry path builds a new transaction with a fresh blockhash.
-  For offline or slow signing flows, durable nonces exist precisely because signed
-  transactions cannot wait around.</li>
-  <li><strong>Bitcoin: nothing is yours until it confirms.</strong> Mempools are local
-  opinion, eviction is silent, and replacement is a feature. The PENDING state carries
-  an age timer, and remediation (fee-bump or child-pays-for-parent) is a policy-driven
-  transition, not an ops improvisation.</li>
-</ul>
+<p>On Ethereum, the nonce queue bends it. Transactions from one address confirm in
+nonce order, so one underpriced transaction blocks everything behind it and "stuck" is
+contagious. The state machine needs a per-account view on top of the per-transaction
+one: remediating transaction N gets you nowhere if N-1 is the one that is stuck.</p>
 
-<h2>The audit trail is not a log file</h2>
+<p>On Solana, transactions expire. A transaction references a recent blockhash and dies
+after roughly 150 slots if unconfirmed. EXPIRED becomes a first-class terminal state,
+and the retry path builds a new transaction with a fresh blockhash. For offline or slow
+signing flows, durable nonces exist because signed transactions cannot wait around.</p>
 
-<p>In a regulated environment, every transition needs: previous state, new state,
+<p>On Bitcoin, nothing is yours until it confirms. Mempools are local opinion, eviction
+is silent, and replacement is a feature. The PENDING state carries an age timer, and
+remediation (fee-bump or child-pays-for-parent) is a transition your policy defines in
+advance, so ops runs a playbook instead of improvising.</p>
+
+<h2>The audit trail belongs in the database</h2>
+
+<p>In a regulated environment, each transition needs: previous state, new state,
 trigger (who or what), timestamp, and the evidence (block hash, node response, policy
-decision id). Stored as data, queryable, immutable. When a client asks why a withdrawal
-took forty minutes, or an auditor asks who approved it, the answer is a query, not a
-grep through application logs that rotated last month.</p>
+decision id). Store all of that as immutable, queryable data. When a client asks why a
+withdrawal took forty minutes, or an auditor asks who approved it, you answer with a
+query instead of grepping application logs that rotated last month.</p>
 
-<h2>What actually breaks: a short list from production</h2>
+<h2>What breaks in production</h2>
 
-<ol>
-  <li>Treating broadcast as done. The transaction vanishes from the mempool and from
-  your books at the same time.</li>
-  <li>No REPLACED state. Fee-bumps look like failures; monitoring cries wolf until
-  people stop listening.</li>
-  <li>Re-signing on retry instead of re-broadcasting persisted bytes.</li>
-  <li>Per-transaction thinking on Ethereum, ignoring the nonce queue.</li>
-  <li>No EXPIRED state on Solana; transactions rot in PENDING forever.</li>
-  <li>Crediting on CONFIRMED with one global threshold for every chain.</li>
-  <li>No backwards transition for reorgs, so reconciliation finds the hole weeks later.</li>
-</ol>
+<p>The failures I keep meeting are the same ones. A team treats broadcast as done, and
+the transaction vanishes from the mempool and from their books at the same time. They
+skip the REPLACED state, so fee-bumps look like failures and monitoring cries wolf until
+people stop listening. They re-sign on retry instead of re-broadcasting persisted
+bytes. On Ethereum they think per-transaction and ignore the nonce queue; on Solana
+they have no EXPIRED state, so transactions rot in PENDING forever. They credit on
+CONFIRMED with one global threshold for every chain, and they leave out the backwards
+transition for reorgs, so reconciliation finds the hole weeks later.</p>
 
-<p>None of these are hard to fix on a whiteboard. All of them are expensive to fix
-after the money moved.</p>
+<p>Each of these is a whiteboard fix, until the money has already moved.</p>
 
 </article>
 

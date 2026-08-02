@@ -88,43 +88,44 @@ footer a { color: var(--accent); text-decoration: none; }
 ranker on one side, a replay engine on the other. The first equity curve it produced was
 gorgeous. Smooth, steep, barely a drawdown. I did not feel clever. I felt suspicious,
 because I have written enough systems to know that when a program tells you something
-wonderful on the first run, the program is usually describing itself rather than the
+wonderful on the first run, it tends to be describing its own defects rather than the
 world.</p>
 
-<p>It was. The curve was a bug report written in the notation of finance. Here is what
-was in it, and why almost every one of these failures is a familiar systems problem
-wearing a ticker symbol.</p>
+<p>It was. The curve was a bug report written in the notation of finance. When I dug
+through it, most of the failures turned out to be systems problems I had already met in
+other codebases, with a ticker symbol attached.</p>
 
-<h2>Look-ahead bias, the version that actually gets you</h2>
+<h2>Look-ahead bias, the version that gets you</h2>
 
-<p>Nobody writes <code>buy(tomorrow_close)</code>. The real leaks are quieter:</p>
+<p>You will never write <code>buy(tomorrow_close)</code> on purpose. The leaks that make
+it into production are quieter:</p>
 
 <ul>
-  <li><strong>Indicators computed on the full series, then sliced.</strong> You load ten
-  years of prices, compute a moving average or a z-score over the whole array, and then
-  iterate day by day. Every value in that array was computed with knowledge of the entire
-  history, including the part that had not happened yet. The loop looks causal. The data
-  is not.</li>
-  <li><strong>Deciding during a bar on that bar's close.</strong> A rule that says "if
-  today closes above the average, buy today at the close" is only executable if you knew
-  the close before it printed. Signal time and execution time are different clocks, and
-  the gap between them is where honest backtests lose most of their edge.</li>
-  <li><strong>Fundamentals applied before publication.</strong> A P/E ratio dated to the
-  end of the fiscal quarter is a ratio nobody could compute until the filing came out,
-  weeks later. Ranking a universe on data that was still confidential is not a factor
-  model, it is time travel.</li>
-  <li><strong>Restated financials.</strong> Vendors typically serve you the corrected
-  numbers. Your backtest then trades on figures that were revised after the fact, in
-  exactly the direction reality later confirmed.</li>
+  <li>Indicators computed on the full series, then sliced. You load ten years of prices,
+  compute a moving average or a z-score over the whole array, and then iterate day by
+  day. Every value in that array carries knowledge of the entire history, including the
+  part that had not happened yet at the simulated date, so the loop looks causal while
+  the data is not.</li>
+  <li>Deciding during a bar on that bar's close. A rule that says "if today closes above
+  the average, buy today at the close" only executes if you knew the close before it
+  printed. Signal time and execution time run on different clocks, and honest backtests
+  lose most of their edge in the gap between them.</li>
+  <li>Fundamentals applied before publication. A P/E ratio dated to the end of the fiscal
+  quarter is a ratio no investor could compute until the filing came out, weeks later.
+  Ranking a universe on data that was still confidential amounts to time travel.</li>
+  <li>Restated financials. Vendors serve you the corrected numbers by default, so your
+  backtest trades on figures that someone revised after the fact, in the direction
+  reality later confirmed.</li>
 </ul>
 
-<p>The fix is not vigilance. Vigilance fails at 1am when you are adding one more feature.
-The fix is an invariant that the engine cannot violate: <strong>at simulated time T, the
-only data reachable is data whose timestamp is less than or equal to T</strong>, enforced
-by the API, not by the author's discipline. Point-in-time storage with two timestamps per
-record, the event time and the time it became knowable, and an accessor that takes T and
-physically cannot return anything else. Make the wrong thing unrepresentable and the
-class of bug disappears instead of moving around.</p>
+<p>I stopped relying on vigilance, because vigilance fails at 1am when you are adding one
+more feature. The engine needs an invariant it cannot violate: <strong>at simulated time
+T, the only data reachable is data whose timestamp is less than or equal to T</strong>,
+enforced by the API rather than by the author's discipline. That means point-in-time
+storage with two timestamps per record, the event time and the time it became knowable,
+plus an accessor that takes T and has no way to return anything newer. Once you make the
+wrong access unrepresentable, that class of bug stops recurring instead of moving
+around.</p>
 
 <div class="diagram"><svg viewBox="0 0 760 200" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="A timeline with a decision point at time T, a shaded region of data visible at that time, a dashed future region that must not be visible, and an arrow labelled look-ahead leak crossing from the future into the decision">
   <defs>
@@ -160,76 +161,75 @@ class of bug disappears instead of moving around.</p>
 
 <p>Ask where your universe of stocks came from. If the answer is "today's index members"
 or "everything my data provider currently lists", the backtest is running on companies
-pre-selected for the property of still existing. Everything that went bankrupt, got
-delisted, or was acquired at a discount has been quietly removed from history, and those
-were precisely the positions that would have hurt.</p>
+pre-selected for the property of still existing. Your provider has already dropped from
+history everything that went bankrupt, got delisted, or was acquired at a discount, and
+those were the positions that would have hurt.</p>
 
 <p>Testing "the S&amp;P 500 constituents" with today's membership list compounds the
 problem, because index membership itself is a momentum and quality filter. Companies join
 after doing well and leave after doing badly. Backtesting today's members over the last
 decade means buying, in 2016, the firms that a committee would later decide had earned
 their place. You need historical constituent lists with the dates they changed, and a
-universe that includes the dead. A strategy that only works on survivors has discovered
-survival, not alpha.</p>
+universe that includes the dead. If the strategy only works on survivors, you have
+measured survival rather than skill.</p>
 
 <h2>The point-in-time problem, generally</h2>
 
-<p>Survivorship and look-ahead are two symptoms of one disease: history is not a fixed
-object. It gets rewritten under you.</p>
+<p>Survivorship and look-ahead share a root cause: the historical record you query is
+not a fixed object. Vendors keep rewriting it under you.</p>
 
 <ul>
   <li>Dividend and split adjustments retroactively change every prior price in the series,
   so the number your rule compared against last month is not the number it compares
   against today.</li>
-  <li>Vendors revise silently. A backfill, a corrected corporate action, a changed
-  methodology, and yesterday's file is not today's file.</li>
+  <li>Vendors revise without announcement. A backfill, a corrected corporate action, a
+  changed methodology, and yesterday's file no longer matches today's file.</li>
   <li>Tickers get reused. The same three letters can be two unrelated companies across a
   decade, which is why identity should hang off a stable security identifier and never off
   the symbol.</li>
 </ul>
 
 <div class="callout">
-Run the same backtest against "the same" data twice, a month apart, and get two different
-equity curves. That is not a market observation. That is a reproducibility failure, and it
-means the number you are staring at belongs to your data pipeline rather than to your
-strategy.
+Run the same backtest against "the same" data twice, a month apart, and you may get two
+different equity curves. That difference is a reproducibility failure, and it means the
+number you are staring at belongs to your data pipeline rather than to your strategy.
 </div>
 
 <h2>Overfitting: the best of 200 tries is a measurement of noise</h2>
 
-<p>Search a parameter grid of 200 combinations and report the winner, and you have not
-found a strategy, you have run a lottery and reported the ticket that hit. The more
+<p>Search a parameter grid of 200 combinations and report the winner, and you have run a
+lottery and reported the ticket that hit, whatever you call the result. The more
 configurations you test, the higher the best in-sample result you should expect from pure
 chance, which means the winner's performance needs to be discounted by how hard you
 searched before it means anything. Two hundred coin-flippers, one of them lands eight
 heads in a row, and there is nothing special about his wrist.</p>
 
-<p>The countermeasures are unglamorous. Hold out data you genuinely never look at. Use
-walk-forward: fit on a window, trade the next window blind, roll, and read only the
-stitched out-of-sample result. Count your experiments honestly, including the ones you
-abandoned, because the ones you abandoned are part of the search. And remember that "my
+<p>The countermeasures are unglamorous. Hold out data and refuse to look at it until the
+end. Use walk-forward: fit on a window, trade the next window blind, roll, and read only
+the stitched out-of-sample result. Count every experiment, including the ones you
+abandoned, because the abandoned runs are part of the search. And remember that "my
 strategy beat buy-and-hold from 2015 to 2020" is a single sample from a single regime,
 reported by someone who chose the dates after seeing the data.</p>
 
 <h2>Costs the naive engine forgets</h2>
 
 <p>The first version of any engine fills every order instantly at the close, in unlimited
-size, for free. Reality charges for all three:</p>
+size, for free. Reality charges for each of those assumptions:</p>
 
 <ul>
-  <li><strong>Spread.</strong> You buy at the ask and sell at the bid. Round trip, you pay
-  the spread every time.</li>
-  <li><strong>Slippage and market impact.</strong> Your own order moves the price against
-  you, and the effect grows with size and shrinks with liquidity.</li>
-  <li><strong>Borrow costs.</strong> Short legs are not free, and the hardest-to-borrow
-  names are exactly the ones the signal loves.</li>
-  <li><strong>Taxes and commissions.</strong> Jurisdiction-specific, turnover-sensitive,
-  and brutal to high-frequency rebalancing.</li>
+  <li>Spread: you buy at the ask and sell at the bid, so you pay the spread on every
+  round trip.</li>
+  <li>Slippage and market impact: your own order moves the price against you, more so as
+  size grows and liquidity thins.</li>
+  <li>Borrow costs: short legs cost money to hold, and the hardest-to-borrow names are
+  the ones the signal loves most.</li>
+  <li>Taxes and commissions: jurisdiction-specific, turnover-sensitive, and brutal to
+  high-frequency rebalancing.</li>
 </ul>
 
-<p>A strategy whose per-trade edge is smaller than the spread is not an edge, it is an
-invoice. And an engine that fills you at a price nobody was actually offering is not
-simulating a market, it is simulating a wish.</p>
+<p>A strategy whose per-trade edge is smaller than the spread loses money on every round
+trip by construction. And an engine that fills you at prices no one was offering has
+stopped simulating the market you plan to trade in.</p>
 
 <h2>Regime dependence: n equals one</h2>
 
@@ -237,59 +237,56 @@ simulating a market, it is simulating a wish.</p>
 monetary and structural backdrop that changes on a timescale of years. A ten-year backtest
 feels like a lot of data because it contains thousands of daily bars, but on the variable
 that dominates asset returns, the interest rate cycle, it may contain exactly one
-observation. Thousands of samples of the noise, one sample of the thing that matters. Ask
-what happens to your strategy across a regime it has never seen, and if the honest answer
-is "unknown", say so in the report.</p>
+observation. You get thousands of samples of the noise and one sample of the variable
+that drives returns. Ask what happens to your strategy across a regime it has never seen,
+and if the honest answer is "unknown", write that in the report.</p>
 
 <h2>The engineering frame</h2>
 
-<p>Here is the reframing that changed how I built mine. <strong>A backtest is a replay
-engine.</strong> It is the same category of system as any event-sourced service that must
-reconstruct the past faithfully, and the properties that make those systems trustworthy
-are exactly the ones that make a backtest trustworthy:</p>
+<p>One reframing changed how I built mine: <strong>a backtest is a replay
+engine</strong>. It belongs to the same category of system as an event-sourced service
+that must reconstruct the past faithfully, and the properties that make those services
+trustworthy carry over one for one:</p>
 
 <ul>
-  <li><strong>Deterministic replay.</strong> Same inputs, same seed, same outputs, always.
-  If your run varies, your results are not measurements.</li>
-  <li><strong>Immutable event log.</strong> Market data and fundamentals are appended
-  facts, never updated rows. Corrections arrive as new events with their own knowable-at
+  <li>Deterministic replay: same inputs, same seed, same outputs, on every run. If two
+  runs of the same configuration differ, you are not taking measurements.</li>
+  <li>An immutable event log: market data and fundamentals arrive as appended facts,
+  never as updated rows, and corrections come in as new events with their own knowable-at
   timestamp.</li>
-  <li><strong>No mutation of history.</strong> Adjustments are computed at read time from
-  the event log, not baked destructively into the stored series.</li>
-  <li><strong>Clock discipline.</strong> Event time and processing time are different
-  fields with different meanings, and confusing them is the whole of look-ahead bias
-  restated in distributed-systems vocabulary.</li>
-  <li><strong>Pinned, versioned datasets.</strong> Every run records the snapshot
-  identifier, the code commit and the parameters, so a result can be reproduced months
-  later or declared void.</li>
+  <li>No mutation of history: the engine computes adjustments at read time from the event
+  log instead of baking them destructively into the stored series.</li>
+  <li>Clock discipline: event time and processing time live in different fields with
+  different meanings, and confusing them is the whole of look-ahead bias restated in
+  distributed-systems vocabulary.</li>
+  <li>Pinned, versioned datasets: every run records the snapshot identifier, the code
+  commit and the parameters, so you can reproduce a result months later or declare it
+  void.</li>
 </ul>
 
-<p>If your backtest is not reproducible byte for byte from a pinned dataset, you are not
-measuring a strategy. You are measuring your data pipeline.</p>
+<p>If you cannot rerun a result byte for byte from a pinned dataset, treat the number as
+a property of your pipeline rather than of your strategy.</p>
 
-<h2>The checklist</h2>
+<h2>What I hold my own engine to</h2>
 
-<ol>
-  <li>Point-in-time access only: at time T the engine can reach nothing timestamped after
-  T, enforced by the API rather than by care.</li>
-  <li>Signal time and execution time are separate, with a realistic gap between them.</li>
-  <li>The universe includes delisted, bankrupt and acquired names, reconstituted from
-  historical membership with dates.</li>
-  <li>Identity keys off a stable security identifier, never off the ticker.</li>
-  <li>Costs are modelled explicitly: spread, slippage, impact, borrow, commissions, taxes.
-  Then ask whether the edge survives.</li>
-  <li>Out-of-sample and walk-forward results are the only ones you quote, and you count
-  every experiment you ran.</li>
-  <li>Every run is pinned to a dataset snapshot plus a code commit, and reruns match byte
-  for byte.</li>
-  <li>The report states which regimes were covered and, more importantly, which were not.</li>
-</ol>
+<p>Point-in-time access comes first: at time T the engine can reach nothing timestamped
+after T, and the API enforces that rather than my care. Signal time and execution time
+stay separate, with a realistic gap between them. The universe includes delisted,
+bankrupt and acquired names, reconstituted from historical membership lists with dates,
+and identity keys off a stable security identifier, never off the ticker.</p>
 
-<p>None of this makes a backtest true. It makes it falsifiable, which is the most a
-simulation of the past can offer. The beautiful curve is the null hypothesis. Your job is
-to spend a week trying to break it, and to be genuinely pleased when you succeed, because
-finding the leak in your own engine is enormously cheaper than finding it in the
-market.</p>
+<p>I model every cost the naive engine skipped, spread, slippage, impact, borrow,
+commissions and taxes, and then ask whether the edge survives them. I quote out-of-sample
+and walk-forward results and nothing else, and I count each experiment I ran, abandoned
+ones included. Each run pins a dataset snapshot plus a code commit, and a rerun has to
+match byte for byte. The report states which regimes the test covered, and which it did
+not, which is the more useful line of the two.</p>
+
+<p>These constraints leave a backtest short of true, but they make it falsifiable, and
+falsifiable is the most a simulation of the past can offer. When the next gorgeous curve
+appears, I treat it as the null hypothesis and spend a week trying to break it, and I am
+pleased when I succeed, because a leak found in my own engine costs me a week while the
+same leak found in the market costs me money.</p>
 
 </article>
 
