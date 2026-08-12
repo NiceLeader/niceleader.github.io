@@ -77,6 +77,10 @@ async function createFixture() {
       path.join(rootDir, "blog", post.slug, "index.html"),
       `<html><head><title>${post.title}</title></head><body>${post.title}</body></html>`,
     );
+    await writeText(
+      path.join(rootDir, "blog", `${post.slug}.html`),
+      `<html><head><title>${post.title} redirect</title></head></html>`,
+    );
   }
 
   return { manifest, outputDir, rootDir };
@@ -118,8 +122,11 @@ test("build publishes one post consistently and excludes drafts and scheduled po
   assert.doesNotMatch(sitemap, /blog\/draft-post\//);
   assert.doesNotMatch(sitemap, /blog\/scheduled-post\//);
   assert.ok(files.includes("blog/published-post/index.html"));
+  assert.ok(files.includes("blog/published-post.html"));
   assert.ok(!files.includes("blog/draft-post/index.html"));
+  assert.ok(!files.includes("blog/draft-post.html"));
   assert.ok(!files.includes("blog/scheduled-post/index.html"));
+  assert.ok(!files.includes("blog/scheduled-post.html"));
 });
 
 test("build output is deterministic", async () => {
