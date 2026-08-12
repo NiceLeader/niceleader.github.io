@@ -12,7 +12,7 @@ const INLINE_FOCUS_STYLE = "a:focus-visible { outline: 2px solid currentColor; }
 function validSecurityHeaders() {
   const styleHash = createHash("sha256").update(INLINE_FOCUS_STYLE).digest("base64");
   return `/*
-  Content-Security-Policy: default-src 'none'; base-uri 'none'; connect-src https://cloudflareinsights.com; font-src 'self'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; manifest-src 'self'; object-src 'none'; script-src 'self' https://static.cloudflareinsights.com; script-src-attr 'none'; style-src 'self' 'sha256-${styleHash}'; style-src-attr 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'none'; base-uri 'none'; connect-src https://cloudflareinsights.com; font-src 'self'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; manifest-src 'self'; object-src 'none'; script-src 'self' https://static.cloudflareinsights.com; script-src-attr 'none'; style-src 'self' 'sha256-${styleHash}'; style-src-attr 'none'
   Cross-Origin-Opener-Policy: same-origin
   Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()
   Referrer-Policy: strict-origin-when-cross-origin

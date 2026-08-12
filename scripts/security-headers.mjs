@@ -5,7 +5,8 @@ const CLOUDFLARE_ANALYTICS_CONNECT_ORIGIN = "https://cloudflareinsights.com";
 const CLOUDFLARE_ANALYTICS_SCRIPT_ORIGIN = "https://static.cloudflareinsights.com";
 
 function sha256Source(source) {
-  return `'sha256-${createHash("sha256").update(source).digest("base64")}'`;
+  const browserNormalizedSource = source.replace(/\r\n?/g, "\n");
+  return `'sha256-${createHash("sha256").update(browserNormalizedSource).digest("base64")}'`;
 }
 
 function collectHashes(htmlSources, extractSources) {
@@ -68,7 +69,6 @@ export function renderContentSecurityPolicy(htmlSources) {
     directive("script-src-attr", ["'none'"]),
     directive("style-src", ["'self'", ...styleHashes]),
     directive("style-src-attr", styleAttributeSources),
-    "upgrade-insecure-requests",
   ].join("; ");
 
   if (policy.length > MAX_HEADER_VALUE_LENGTH) {
