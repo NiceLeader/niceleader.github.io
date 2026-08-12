@@ -166,6 +166,31 @@ test("manifest validation rejects duplicate slugs", () => {
   );
 });
 
+test("manifest validation rejects impossible calendar dates", () => {
+  assert.throws(
+    () =>
+      validateManifest({
+        site: {
+          title: "Example",
+          description: "Example",
+          url: "https://example.com",
+          language: "en",
+        },
+        posts: [
+          {
+            slug: "impossible-date",
+            title: "Impossible date",
+            description: "Must fail instead of rolling into March",
+            date: "2026-02-31",
+            track: "Engineering",
+            status: "published",
+          },
+        ],
+      }),
+    /YYYY-MM-DD/,
+  );
+});
+
 test("build fails closed when a published source file is missing", async () => {
   const { manifest, outputDir, rootDir } = await createFixture();
   manifest.posts.push({
