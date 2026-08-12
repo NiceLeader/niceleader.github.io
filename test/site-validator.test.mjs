@@ -1,10 +1,26 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 
 import { validateBuiltSite } from "../scripts/site-validator.mjs";
+
+const INLINE_FOCUS_STYLE = "a:focus-visible { outline: 2px solid currentColor; }";
+
+function validSecurityHeaders() {
+  const styleHash = createHash("sha256").update(INLINE_FOCUS_STYLE).digest("base64");
+  return `/*
+  Content-Security-Policy: default-src 'none'; base-uri 'none'; connect-src https://cloudflareinsights.com; font-src 'self'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; manifest-src 'self'; object-src 'none'; script-src 'self' https://static.cloudflareinsights.com; script-src-attr 'none'; style-src 'self' 'sha256-${styleHash}'; style-src-attr 'none'; upgrade-insecure-requests
+  Cross-Origin-Opener-Policy: same-origin
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+`;
+}
 
 async function writeText(filePath, contents) {
   await mkdir(path.dirname(filePath), { recursive: true });
@@ -21,7 +37,7 @@ function validPage({ body = "", canonical = "https://example.com/", title = "Exa
 <meta name="description" content="A useful description for the page.">
 <link rel="canonical" href="${canonical}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<style>a:focus-visible { outline: 2px solid currentColor; }</style>
+<style>${INLINE_FOCUS_STYLE}</style>
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to content</a>
@@ -52,6 +68,7 @@ async function createValidSiteFixture() {
     path.join(outputDir, "sitemap.xml"),
     "<?xml version=\"1.0\"?><urlset><url><loc>https://example.com/</loc></url></urlset>",
   );
+  await writeText(path.join(outputDir, "_headers"), validSecurityHeaders());
   return outputDir;
 }
 
@@ -143,4 +160,25 @@ test("validator fails when a published post is absent from output", async () => 
   });
 
   assert.ok(issues.some((issue) => /published post is missing/i.test(issue.message)));
+});
+
+test("validator rejects unsafe or incomplete deployment headers", async () => {
+  const outputDir = await createValidSiteFixture();
+  await writeText(
+    path.join(outputDir, "_headers"),
+    `/*
+  Content-Security-Policy: default-src * 'unsafe-inline' 'unsafe-eval'
+`,
+  );
+
+  const issues = await validateBuiltSite({
+    outputDir,
+    publishedSlugs: ["published"],
+    unpublishedSlugs: [],
+  });
+  const messages = issues.map((issue) => issue.message).join("\n");
+
+  assert.match(messages, /unsafe-inline/i);
+  assert.match(messages, /unsafe-eval/i);
+  assert.match(messages, /missing required security header/i);
 });

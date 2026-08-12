@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -10,6 +11,10 @@ const HOME_START = "<!-- HOME_POSTS_START -->";
 const HOME_END = "<!-- HOME_POSTS_END -->";
 const BLOG_START = "<!-- BLOG_POSTS_START -->";
 const BLOG_END = "<!-- BLOG_POSTS_END -->";
+
+function sha256Source(source) {
+  return `'sha256-${createHash("sha256").update(source).digest("base64")}'`;
+}
 
 async function writeText(filePath, contents) {
   await mkdir(path.dirname(filePath), { recursive: true });
@@ -54,9 +59,14 @@ async function createFixture() {
     ],
   };
 
+  const inlineScript = '{"@context":"https://schema.org","@type":"WebSite"}';
+  const inlineStyle = "body { color: rgb(10 20 30); }";
+  const styleAttribute = "color: rgb(40 50 60)";
   await writeText(
     path.join(rootDir, "index.html"),
-    `<html><body>${HOME_START}<p>stale</p>${HOME_END}</body></html>`,
+    `<html><head><script type="application/ld+json">${inlineScript}</script>` +
+      `<style>${inlineStyle}</style></head><body style="${styleAttribute}">` +
+      `${HOME_START}<p>stale</p>${HOME_END}</body></html>`,
   );
   await writeText(
     path.join(rootDir, "blog", "index.html"),
@@ -83,7 +93,7 @@ async function createFixture() {
     );
   }
 
-  return { manifest, outputDir, rootDir };
+  return { inlineScript, inlineStyle, manifest, outputDir, rootDir, styleAttribute };
 }
 
 async function listFiles(directoryPath, basePath = directoryPath) {
@@ -146,6 +156,27 @@ test("build output is deterministic", async () => {
 
   assert.deepEqual(secondFiles, firstFiles);
   assert.deepEqual(secondContents, firstContents);
+});
+
+test("build generates strict security headers for every inline source", async () => {
+  const { inlineScript, inlineStyle, outputDir, rootDir, styleAttribute } =
+    await createFixture();
+
+  await buildSite({ rootDir, outputDir });
+
+  const headers = await readFile(path.join(outputDir, "_headers"), "utf8");
+
+  assert.match(headers, /^\/\*$/m);
+  assert.match(headers, /Content-Security-Policy: default-src 'none';/);
+  assert.ok(headers.includes(sha256Source(inlineScript)));
+  assert.ok(headers.includes(sha256Source(inlineStyle)));
+  assert.ok(headers.includes(sha256Source(styleAttribute)));
+  assert.doesNotMatch(headers, /'unsafe-inline'|'unsafe-eval'/);
+  assert.match(headers, /Strict-Transport-Security: max-age=31536000/);
+  assert.match(headers, /X-Content-Type-Options: nosniff/);
+  assert.match(headers, /X-Frame-Options: DENY/);
+  assert.match(headers, /Referrer-Policy: strict-origin-when-cross-origin/);
+  assert.match(headers, /Permissions-Policy:/);
 });
 
 test("manifest validation rejects duplicate slugs", () => {
