@@ -109,11 +109,14 @@ test("build publishes one post consistently and excludes drafts and scheduled po
   const sitemap = await readFile(path.join(outputDir, "sitemap.xml"), "utf8");
   const files = await listFiles(outputDir);
 
-  for (const aggregate of [home, blog, feed, sitemap]) {
+  for (const aggregate of [home, blog, feed]) {
     assert.match(aggregate, /Published post/);
     assert.doesNotMatch(aggregate, /Draft post/);
     assert.doesNotMatch(aggregate, /Scheduled post/);
   }
+  assert.match(sitemap, /blog\/published-post\//);
+  assert.doesNotMatch(sitemap, /blog\/draft-post\//);
+  assert.doesNotMatch(sitemap, /blog\/scheduled-post\//);
   assert.ok(files.includes("blog/published-post/index.html"));
   assert.ok(!files.includes("blog/draft-post/index.html"));
   assert.ok(!files.includes("blog/scheduled-post/index.html"));
