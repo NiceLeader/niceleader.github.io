@@ -16,5 +16,8 @@
     "chrome-launcher": "1.2.1",
     "html-validate": "10.17.0",
     "lighthouse": "12.6.1"
+  },
+  "overrides": {
+    "@puppeteer/browsers": "3.2.0"
   }
 }
