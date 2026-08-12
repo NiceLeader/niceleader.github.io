@@ -16,7 +16,7 @@ test("production workflow deploys only the verified artifact to Cloudflare Pages
   assert.match(workflow, /npm run lighthouse/);
   assert.match(
     workflow,
-    /cloudflare\/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd/,
+    /cloudflare\/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0/,
   );
   assert.match(workflow, /wranglerVersion: "4\.122\.0"/);
   assert.match(workflow, /apiToken: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
