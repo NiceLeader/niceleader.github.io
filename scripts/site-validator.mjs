@@ -142,9 +142,11 @@ async function validatePublishingOutput(outputDir, publishedSlugs, unpublishedSl
     }
   }
   for (const slug of unpublishedSlugs) {
-    const postPath = path.join(outputDir, "blog", slug, "index.html");
-    if (await pathExists(postPath)) {
-      issues.push(createIssue(`blog/${slug}/index.html`, "Unpublished post is present in output"));
+    const unpublishedPaths = [`blog/${slug}/index.html`, `blog/${slug}.html`];
+    for (const relativePath of unpublishedPaths) {
+      if (await pathExists(path.join(outputDir, relativePath))) {
+        issues.push(createIssue(relativePath, "Unpublished post is present in output"));
+      }
     }
   }
 
