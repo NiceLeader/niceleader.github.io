@@ -1,0 +1,126 @@
+{
+  "site": {
+    "title": "Maciej Lewandowski - Senior Blockchain Engineer",
+    "description": "Field notes and consulting for digital asset custody, wallet infrastructure and tokenization.",
+    "url": "https://maciejlewandowski.dev",
+    "language": "en",
+    "feedTitle": "Maciej Lewandowski - Custody Engineering Notes",
+    "feedDescription": "Field notes from custody and wallet infrastructure: Bitcoin, EVM, Solana, and the backend systems that hold real money.",
+    "homePostLimit": 6,
+    "trackOrder": [
+      "Custody engineering",
+      "Engineering notes",
+      "AI-assisted engineering"
+    ],
+    "pageDates": {
+      "home": "2026-08-02",
+      "services": "2026-08-02"
+    }
+  },
+  "posts": [
+    {
+      "slug": "rust-money-types",
+      "title": "Money in Rust: Making Illegal States Unrepresentable",
+      "description": "Newtypes, phantom-typed currencies, checked arithmetic and typestate - how much of a financial bug class the compiler can take off your hands, for zero bytes.",
+      "date": "2026-07-25",
+      "track": "Engineering notes",
+      "status": "published"
+    },
+    {
+      "slug": "backtest-lies",
+      "title": "Your Backtest Is Lying to You",
+      "description": "Look-ahead bias, survivorship, point-in-time data and overfitting - why a backtest is a replay engine, and what that demands of it.",
+      "date": "2026-07-25",
+      "track": "Engineering notes",
+      "status": "published"
+    },
+    {
+      "slug": "deposit-detection",
+      "title": "Why Your Deposit Detection Misses Money",
+      "description": "Proxy contracts, fee-on-transfer tokens, reorgs, UTXO edge cases and Solana token accounts - and why continuous reconciliation is the only real fix.",
+      "date": "2026-07-22",
+      "track": "Custody engineering",
+      "status": "published"
+    },
+    {
+      "slug": "transaction-state-machines",
+      "title": "Transaction State Machines for Multi-Chain Custody",
+      "description": "Broadcast is not done, confirmed is not final, and retries are where money gets lost. What breaks, chain by chain.",
+      "date": "2026-07-22",
+      "track": "Custody engineering",
+      "status": "published"
+    },
+    {
+      "slug": "utxo-coin-selection",
+      "title": "UTXO Coin Selection in Production",
+      "description": "Your Bitcoin balance is not a number, it is a set. Fees, dust, privacy and the concurrency problem the tutorials skip.",
+      "date": "2026-07-22",
+      "track": "Custody engineering",
+      "status": "published"
+    },
+    {
+      "slug": "stuck-transactions",
+      "title": "Stuck Transactions at Scale",
+      "description": "RBF, CPFP, nonce queues, expiring blockhashes and the pinning problem - a remediation playbook for transactions that will not confirm.",
+      "date": "2026-07-22",
+      "track": "Custody engineering",
+      "status": "published"
+    },
+    {
+      "slug": "agents-regulated-code",
+      "title": "The Rules for Agent-Written Code in a Regulated Codebase Just Changed",
+      "description": "A practical reading of AI-assisted engineering obligations and evidence expectations in regulated software delivery.",
+      "date": "2026-07-25",
+      "track": "AI-assisted engineering",
+      "status": "draft"
+    },
+    {
+      "slug": "ai-agents-production",
+      "title": "What Actually Changes When Agents Write Your Code",
+      "description": "Context, decomposition, review and guardrails for production software built with coding agents.",
+      "date": "2026-07-25",
+      "track": "AI-assisted engineering",
+      "status": "draft"
+    },
+    {
+      "slug": "training-data-noise",
+      "title": "You Are Overfitting Your Training the Same Way You Overfit a Backtest",
+      "description": "Why short training logs are noisy time series, and how to distinguish adherence from meaningful signal.",
+      "date": "2026-07-25",
+      "track": "Engineering notes",
+      "status": "draft"
+    },
+    {
+      "slug": "proxy-token-storage",
+      "title": "Upgradeable Tokens: Where Do the Balances Actually Live?",
+      "description": "Delegatecall, proxy storage and the custody consequences of upgradeable token architecture.",
+      "date": "2026-07-30",
+      "track": "Custody engineering",
+      "status": "draft"
+    },
+    {
+      "slug": "taproot-multisig-privacy",
+      "title": "A Multisig Nobody Can See",
+      "description": "Taproot, MuSig2 and the operational trade-offs between privacy, cost and auditability in custody.",
+      "date": "2026-08-06",
+      "track": "Custody engineering",
+      "status": "draft"
+    },
+    {
+      "slug": "point-in-time-balances",
+      "title": "Balance at 14:00 UTC Does Not Exist",
+      "description": "Chains never close, so balance at a point in time has to be derived, anchored and reproducible.",
+      "date": "2026-08-12",
+      "track": "Custody engineering",
+      "status": "draft"
+    },
+    {
+      "slug": "sighash-policy",
+      "title": "SIGHASH Is a Security Parameter, Not a Construction Detail",
+      "description": "Why Bitcoin signature hash modes belong in custody policy rather than transaction plumbing.",
+      "date": "2026-08-13",
+      "track": "Custody engineering",
+      "status": "scheduled"
+    }
+  ]
+}
