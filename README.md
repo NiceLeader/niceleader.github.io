@@ -32,17 +32,22 @@ also creates `_site/_headers` with a strict, hash-based Content Security Policy 
 the remaining production security headers. Inline sources are allowlisted by their
 SHA-256 hashes; `unsafe-inline` and `unsafe-eval` are intentionally forbidden.
 
-Cloudflare Pages production settings:
+Cloudflare Pages production contract:
 
+- project: `maciejlewandowski-dev`;
 - production branch: `main`;
-- build command: `npm run check`;
-- build output directory: `_site`;
+- deployable directory: `_site`;
 - Node.js version: `22.22.0`.
 
-`.github/workflows/pages.yml` provides an artifact-only GitHub Pages deployment as a
-fallback. It rebuilds and validates the site on `main`, then deploys only `_site/`.
-GitHub Pages must remain set to GitHub Actions; the legacy `main:/` source would expose
-unpublished source directories.
+`.github/workflows/pages.yml` rebuilds and validates the site on `main`, runs the
+Lighthouse gates with the generated headers active, and deploys only `_site/` to
+Cloudflare Pages through the official Wrangler action. It requires the
+`CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` repository secrets; the token is
+limited to Cloudflare Pages edit access for the production account.
+
+GitHub Pages must remain set to GitHub Actions and is not a production target. The
+legacy `main:/` source would expose unpublished source directories and must never be
+re-enabled.
 
 ## Quality gates
 
