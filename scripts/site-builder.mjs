@@ -27,7 +27,12 @@ function assertNonEmptyString(value, fieldName) {
 
 function assertIsoDate(value, fieldName) {
   assertNonEmptyString(value, fieldName);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(`${value}T00:00:00Z`))) {
+  const parsedDate = new Date(`${value}T00:00:00Z`);
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+    Number.isNaN(parsedDate.valueOf()) ||
+    parsedDate.toISOString().slice(0, 10) !== value
+  ) {
     throw new Error(`${fieldName} must use YYYY-MM-DD`);
   }
 }
