@@ -27,6 +27,7 @@ const ROUTES = [
   { path: "/services/", reportName: "services" },
   { path: "/blog/", reportName: "blog" },
   { path: "/blog/rust-money-types/", reportName: "article" },
+  { path: "/blog/point-in-time-balances/", reportName: "article-point-in-time" },
   {
     path: "/404.html",
     reportName: "not-found",
