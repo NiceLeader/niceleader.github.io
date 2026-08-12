@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 <title>Why Your Deposit Detection Misses Money - Maciej Lewandowski</title>
 <meta name="description" content="Field notes from custody engineering: the deposit paths that silently lose money on EVM, Bitcoin and Solana, and why reconciliation is the only real fix.">
 <link rel="canonical" href="https://maciejlewandowski.dev/blog/deposit-detection/">
@@ -14,7 +15,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://maciejlewandowski.dev/og.png">
 <meta name="theme-color" content="#0d1117">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -27,6 +28,7 @@
 }
 </script>
 <style>
+html { color-scheme: light dark; }
 :root {
   --bg: #ffffff; --bg2: #f6f8fa; --fg: #1f2328; --fg2: #59636e;
   --accent: #0969da; --border: #d1d9e0; --code: #f6f8fa;
@@ -44,9 +46,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 .wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
-nav { padding: 28px 0; }
-nav a { color: var(--fg2); text-decoration: none; font-size: 0.95rem; }
+nav { padding: 20px 0; }
+nav a { align-items: center; color: var(--fg2); display: inline-flex; min-height: 44px; text-decoration: none; font-size: 0.95rem; }
 nav a:hover { color: var(--accent); }
+a:focus-visible { border-radius: 3px; outline: 3px solid var(--accent); outline-offset: 4px; }
+.skip-link { background: var(--fg); color: var(--bg); font-weight: 700; left: 16px; padding: 10px 14px; position: fixed; top: 12px; transform: translateY(-180%); z-index: 100; }
+.skip-link:focus { transform: translateY(0); }
 article { padding: 16px 0 64px; }
 h1 { font-size: 2.1rem; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
 .meta { color: var(--fg2); font-size: 0.92rem; margin-bottom: 36px; }
@@ -65,7 +70,7 @@ strong { font-weight: 600; }
   padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 18px; color: var(--fg);
 }
 footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
-footer a { color: var(--accent); text-decoration: none; }
+footer a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 .diagram { margin: 8px 0 26px; }
 .diagram svg { width: 100%; height: auto; display: block; }
 @media (max-width: 760px) {
@@ -73,16 +78,18 @@ footer a { color: var(--accent); text-decoration: none; }
   .diagram svg { width: auto; height: 190px; }
 }
 </style>
-<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;:&quot;92728f4c07bb4620a6b29641e7008b91&quot;}"></script>
 </head>
 <body>
+<a class="skip-link" href="#main-content">Skip to content</a>
 <div class="wrap">
 
-<nav><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/blog/">All posts</a></nav>
+<nav aria-label="Article"><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/blog/">All posts</a></nav>
 
+<main id="main-content">
 <article>
 <h1>Why Your Deposit Detection Misses Money</h1>
-<p class="meta">Maciej Lewandowski &middot; July 2026 &middot; Field notes from custody &amp; wallet infrastructure</p>
+<p class="meta">Maciej Lewandowski &middot; <time datetime="2026-07-22">July 2026</time> &middot; Field notes from custody &amp; wallet infrastructure</p>
 
 <p>Deposit detection sounds like the easy part of a custody platform. Watch an address,
 see an incoming transaction, credit the client. Every tutorial does it in twenty lines.</p>
@@ -209,6 +216,7 @@ column leaves you explaining a number to an auditor with no history behind it.</
 regulated institution can put real balances on.</p>
 
 </article>
+</main>
 
 <footer>
   <p>Maciej Lewandowski &middot; Senior Blockchain Engineer &middot;
