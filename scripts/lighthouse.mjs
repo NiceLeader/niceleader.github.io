@@ -7,10 +7,7 @@ import { fileURLToPath } from "node:url";
 import { launch } from "chrome-launcher";
 import lighthouse from "lighthouse";
 
-import {
-  attemptPasses,
-  selectPassingAttempt,
-} from "./lighthouse-policy.mjs";
+import { attemptPasses } from "./lighthouse-policy.mjs";
 import { parseSecurityHeaders } from "./security-headers.mjs";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -47,7 +44,6 @@ const SCORE_THRESHOLDS = {
   performance: 0.95,
   seo: 1,
 };
-const MAX_ROUTE_ATTEMPTS = 2;
 
 async function pathExists(filePath) {
   try {
@@ -136,52 +132,39 @@ try {
   for (const route of ROUTES) {
     const routeThresholds = route.thresholds ?? SCORE_THRESHOLDS;
     const url = `http://${host}:${address.port}${route.path}`;
-    const attempts = [];
-    let selectedResult = null;
-
-    for (let attempt = 1; attempt <= MAX_ROUTE_ATTEMPTS; attempt += 1) {
-      const result = await lighthouse(url, {
-        logLevel: "error",
-        onlyCategories: Object.keys(SCORE_THRESHOLDS),
-        output: "json",
-        port: chrome.port,
-      });
-      if (!result) {
-        throw new Error(`Lighthouse returned no result for ${route.path}`);
-      }
-
-      const scores = Object.fromEntries(
-        Object.entries(SCORE_THRESHOLDS).map(([category]) => [
-          category,
-          result.lhr.categories[category].score ?? 0,
-        ]),
-      );
-      attempts.push(scores);
-      selectedResult = result;
-      console.log(
-        `${route.path} attempt=${attempt} ${Object.entries(scores)
-          .map(([category, score]) => `${category}=${Math.round(score * 100)}`)
-          .join(" ")}`,
-      );
-
-      if (attemptPasses(scores, routeThresholds)) {
-        break;
-      }
+    const result = await lighthouse(url, {
+      logLevel: "error",
+      onlyCategories: Object.keys(SCORE_THRESHOLDS),
+      output: "json",
+      port: chrome.port,
+    });
+    if (!result) {
+      throw new Error(`Lighthouse returned no result for ${route.path}`);
     }
 
     await writeFile(
       path.join(reportDirectory, `${route.reportName}.json`),
-      selectedResult.report,
+      result.report,
       "utf8",
     );
 
-    const passingAttempt = selectPassingAttempt(attempts, routeThresholds);
-    if (!passingAttempt) {
-      const finalAttempt = attempts.at(-1);
+    const scores = Object.fromEntries(
+      Object.entries(SCORE_THRESHOLDS).map(([category]) => [
+        category,
+        result.lhr.categories[category].score ?? 0,
+      ]),
+    );
+    console.log(
+      `${route.path} ${Object.entries(scores)
+        .map(([category, score]) => `${category}=${Math.round(score * 100)}`)
+        .join(" ")}`,
+    );
+
+    if (!attemptPasses(scores, routeThresholds)) {
       for (const [category, threshold] of Object.entries(routeThresholds)) {
-        if (finalAttempt[category] < threshold) {
+        if (scores[category] < threshold) {
           failures.push(
-            `${route.path} ${category} score ${finalAttempt[category]} is below ${threshold} after ${attempts.length} attempts`,
+            `${route.path} ${category} score ${scores[category]} is below ${threshold}`,
           );
         }
       }
