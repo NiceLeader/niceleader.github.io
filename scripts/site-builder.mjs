@@ -11,7 +11,6 @@ const BLOG_POSTS_END = "<!-- BLOG_POSTS_END -->";
 
 const STATIC_FILES = [
   "404.html",
-  "CNAME",
   "robots.txt",
   "og.png",
   "favicon.svg",

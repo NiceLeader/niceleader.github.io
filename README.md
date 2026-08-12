@@ -42,12 +42,15 @@ Cloudflare Pages production contract:
 `.github/workflows/pages.yml` rebuilds and validates the site on `main`, runs the
 Lighthouse gates with the generated headers active, and deploys only `_site/` to
 Cloudflare Pages through the official Wrangler action. It requires the
-`CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` repository secrets; the token is
-limited to Cloudflare Pages edit access for the production account.
+`CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` secrets in the GitHub
+`production` environment. That environment accepts deployments only from `main`,
+and the token is limited to Cloudflare Pages edit access for the production
+account. The deploy job also rejects a manual run from any non-`main` ref.
 
-GitHub Pages must remain set to GitHub Actions and is not a production target. The
-legacy `main:/` source would expose unpublished source directories and must never be
-re-enabled.
+GitHub Pages is not a production target and must not own the custom domain. A
+provider-specific root `CNAME` file is intentionally absent from both the repository
+and the generated artifact. The legacy GitHub Pages `main:/` source would expose
+unpublished source directories and must never be re-enabled.
 
 ## Quality gates
 
