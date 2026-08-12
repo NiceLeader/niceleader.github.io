@@ -67,6 +67,12 @@ strong { font-weight: 600; }
 footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
 footer a { color: var(--accent); text-decoration: none; }
 a { color: var(--accent); }
+.diagram { margin: 8px 0 26px; }
+.diagram svg { width: 100%; height: auto; display: block; }
+@media (max-width: 760px) {
+  .diagram { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .diagram svg { width: auto; height: 200px; }
+}
 </style>
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
 </head>
@@ -127,6 +133,68 @@ the "total at 14:00" is five readings taken at five different times, presented a
 number. For a trading desk that might be tolerable. For a safeguarding report it is
 wrong by construction.</p>
 
+<div class="diagram"><svg viewBox="0 0 760 215" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Three chain timelines with blocks arriving at different moments, a vertical cut-off line at 14:00 UTC, and the last block before the cut-off highlighted as the anchor on each chain">
+  <line x1="520" y1="24" x2="520" y2="192" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="520" y="14" text-anchor="middle" fill="var(--accent)" font-weight="600">14:00:00 UTC</text>
+
+  <text x="8" y="56" fill="var(--fg)" font-weight="600">Bitcoin</text>
+  <line x1="80" y1="52" x2="745" y2="52" stroke="var(--border)"/>
+  <rect x="100" y="42" width="26" height="20" rx="3" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="215" y="42" width="26" height="20" rx="3" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="380" y="42" width="26" height="20" rx="3" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="472" y="42" width="26" height="20" rx="3" fill="var(--accent)"/>
+  <text x="485" y="78" text-anchor="middle" fill="var(--accent)">anchor</text>
+  <rect x="618" y="42" width="26" height="20" rx="3" fill="none" stroke="var(--border)" stroke-dasharray="3 3"/>
+  <text x="631" y="36" text-anchor="middle" fill="var(--fg2)">14:23</text>
+
+  <text x="8" y="121" fill="var(--fg)" font-weight="600">EVM</text>
+  <line x1="80" y1="117" x2="745" y2="117" stroke="var(--border)"/>
+  <rect x="100" y="107" width="14" height="20" rx="2" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="145" y="107" width="14" height="20" rx="2" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="190" y="107" width="14" height="20" rx="2" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="235" y="107" width="14" height="20" rx="2" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="280" y="107" width="14" height="20" rx="2" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="325" y="107" width="14" height="20" rx="2" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="370" y="107" width="14" height="20" rx="2" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="415" y="107" width="14" height="20" rx="2" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="460" y="107" width="14" height="20" rx="2" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="497" y="107" width="14" height="20" rx="2" fill="var(--accent)"/>
+  <text x="504" y="143" text-anchor="middle" fill="var(--accent)">anchor (finalized)</text>
+  <rect x="545" y="107" width="14" height="20" rx="2" fill="none" stroke="var(--border)" stroke-dasharray="3 3"/>
+  <rect x="590" y="107" width="14" height="20" rx="2" fill="none" stroke="var(--border)" stroke-dasharray="3 3"/>
+  <rect x="635" y="107" width="14" height="20" rx="2" fill="none" stroke="var(--border)" stroke-dasharray="3 3"/>
+
+  <text x="8" y="186" fill="var(--fg)" font-weight="600">Solana</text>
+  <line x1="80" y1="182" x2="745" y2="182" stroke="var(--border)"/>
+  <rect x="100" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="122" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="144" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="166" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="188" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="210" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="232" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="254" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="276" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="298" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="320" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="342" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="364" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="386" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="408" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="430" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="452" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="474" y="172" width="6" height="20" fill="var(--code)" stroke="var(--border)"/>
+  <rect x="506" y="172" width="6" height="20" fill="var(--accent)"/>
+  <text x="509" y="208" text-anchor="middle" fill="var(--accent)">slot</text>
+  <rect x="540" y="172" width="6" height="20" fill="none" stroke="var(--border)" stroke-dasharray="3 3"/>
+  <rect x="562" y="172" width="6" height="20" fill="none" stroke="var(--border)" stroke-dasharray="3 3"/>
+  <rect x="584" y="172" width="6" height="20" fill="none" stroke="var(--border)" stroke-dasharray="3 3"/>
+  <rect x="606" y="172" width="6" height="20" fill="none" stroke="var(--border)" stroke-dasharray="3 3"/>
+
+  <text x="640" y="90" fill="var(--fg2)">blocks keep</text>
+  <text x="640" y="104" fill="var(--fg2)">arriving</text>
+</svg></div>
+
 <div class="callout">The anchor - block hash and height, or slot - is part of the
 answer. A balance without its anchor is a rumor. Record it, and anyone can stand at the
 same point in history and check your work.</div>
@@ -166,6 +234,39 @@ serialization, because "the same data" in a different key order fails a hash che
 means recording the full input set - addresses, descriptors, anchors, even which
 endpoints served the data - and hashing it, so that "we derived this from that" is a
 verifiable claim instead of a sentence in an email.</p>
+
+<div class="diagram"><svg viewBox="0 0 760 165" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Derivation pipeline: addresses, descriptors and a timestamp go through anchor selection and per-chain derivation into balances with anchors and an input hash; a verify loop re-runs the derivation and compares bytes">
+  <rect x="10" y="30" width="160" height="66" rx="8" fill="var(--bg2)" stroke="var(--border)"/>
+  <text x="90" y="52" text-anchor="middle" fill="var(--fg)">addresses,</text>
+  <text x="90" y="68" text-anchor="middle" fill="var(--fg)">descriptors,</text>
+  <text x="90" y="84" text-anchor="middle" fill="var(--fg)">timestamp</text>
+
+  <line x1="170" y1="63" x2="205" y2="63" stroke="var(--fg2)"/>
+  <polygon points="205,63 197,59 197,67" fill="var(--fg2)"/>
+
+  <rect x="208" y="30" width="150" height="66" rx="8" fill="var(--bg2)" stroke="var(--border)"/>
+  <text x="283" y="57" text-anchor="middle" fill="var(--fg)">anchor per chain</text>
+  <text x="283" y="75" text-anchor="middle" fill="var(--fg2)">hash + height / slot</text>
+
+  <line x1="358" y1="63" x2="393" y2="63" stroke="var(--fg2)"/>
+  <polygon points="393,63 385,59 385,67" fill="var(--fg2)"/>
+
+  <rect x="396" y="30" width="180" height="66" rx="8" fill="var(--bg2)" stroke="var(--border)"/>
+  <text x="486" y="57" text-anchor="middle" fill="var(--fg)">derive per semantics</text>
+  <text x="486" y="75" text-anchor="middle" fill="var(--fg2)">UTXO &#183; logs+traces &#183; ATA</text>
+
+  <line x1="576" y1="63" x2="611" y2="63" stroke="var(--fg2)"/>
+  <polygon points="611,63 603,59 603,67" fill="var(--fg2)"/>
+
+  <rect x="614" y="30" width="136" height="66" rx="8" fill="var(--bg2)" stroke="var(--accent)"/>
+  <text x="682" y="52" text-anchor="middle" fill="var(--fg)">balances +</text>
+  <text x="682" y="68" text-anchor="middle" fill="var(--fg)">anchors +</text>
+  <text x="682" y="84" text-anchor="middle" fill="var(--accent)">input hash</text>
+
+  <path d="M 682 96 V 130 H 90 V 100" fill="none" stroke="var(--fg2)" stroke-dasharray="5 4"/>
+  <polygon points="90,96 86,104 94,104" fill="var(--fg2)"/>
+  <text x="386" y="124" text-anchor="middle" fill="var(--fg2)">verify: re-run the derivation, compare bytes</text>
+</svg></div>
 
 <p>Why does this matter outside of engineering aesthetics? Because the question at the
 top of this post is usually asked by someone whose job is to <em>not take your word for
