@@ -1,6 +1,18 @@
 import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
+import { renderSecurityHeaders } from "./security-headers.mjs";
+
+const REQUIRED_SECURITY_HEADERS = [
+  "Content-Security-Policy",
+  "Cross-Origin-Opener-Policy",
+  "Permissions-Policy",
+  "Referrer-Policy",
+  "Strict-Transport-Security",
+  "X-Content-Type-Options",
+  "X-Frame-Options",
+];
+
 function createIssue(file, message) {
   return { file: file.replaceAll("\\", "/"), message };
 }
@@ -178,6 +190,39 @@ function validateUniqueTitles(htmlFiles, sourcesByFile) {
   return issues;
 }
 
+async function validateSecurityHeaders(outputDir, htmlFiles, sourcesByFile) {
+  const relativePath = "_headers";
+  const headersPath = path.join(outputDir, relativePath);
+  if (!(await pathExists(headersPath))) {
+    return [createIssue(relativePath, "Missing required security headers file")];
+  }
+
+  const headersSource = await readFile(headersPath, "utf8");
+  const issues = [];
+  if (headersSource.includes("'unsafe-inline'")) {
+    issues.push(createIssue(relativePath, "Content-Security-Policy must not use unsafe-inline"));
+  }
+  if (headersSource.includes("'unsafe-eval'")) {
+    issues.push(createIssue(relativePath, "Content-Security-Policy must not use unsafe-eval"));
+  }
+  for (const headerName of REQUIRED_SECURITY_HEADERS) {
+    if (!new RegExp(`^\\s*${headerName}:`, "mi").test(headersSource)) {
+      issues.push(createIssue(relativePath, `Missing required security header: ${headerName}`));
+    }
+  }
+
+  const expectedHeaders = renderSecurityHeaders(
+    htmlFiles.map((relativeHtmlPath) => sourcesByFile.get(relativeHtmlPath)),
+  );
+  if (headersSource !== expectedHeaders) {
+    issues.push(
+      createIssue(relativePath, "Security headers do not match the generated HTML content"),
+    );
+  }
+
+  return issues;
+}
+
 export async function validateBuiltSite({ outputDir, publishedSlugs, unpublishedSlugs }) {
   const files = await collectFiles(outputDir);
   const htmlFiles = files.filter((file) => file.toLowerCase().endsWith(".html"));
@@ -209,6 +254,7 @@ export async function validateBuiltSite({ outputDir, publishedSlugs, unpublished
   issues.push(
     ...(await validatePublishingOutput(outputDir, publishedSlugs, unpublishedSlugs)),
   );
+  issues.push(...(await validateSecurityHeaders(outputDir, htmlFiles, sourcesByFile)));
 
   return issues.sort(
     (left, right) => left.file.localeCompare(right.file) || left.message.localeCompare(right.message),

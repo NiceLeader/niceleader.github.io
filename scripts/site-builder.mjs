@@ -1,6 +1,8 @@
 import { access, copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { renderSecurityHeaders } from "./security-headers.mjs";
+
 const ALLOWED_POST_STATUSES = new Set(["draft", "scheduled", "published"]);
 const HOME_POSTS_START = "<!-- HOME_POSTS_START -->";
 const HOME_POSTS_END = "<!-- HOME_POSTS_END -->";
@@ -16,7 +18,6 @@ const STATIC_FILES = [
   "favicon-32x32.png",
   "apple-touch-icon.png",
   "site.webmanifest",
-  "_headers",
 ];
 
 function assertNonEmptyString(value, fieldName) {
@@ -232,6 +233,23 @@ async function copyFileWhenPresent(rootDir, outputDir, relativePath) {
   await copyFile(sourcePath, destinationPath);
 }
 
+async function collectHtmlSources(directoryPath) {
+  const entries = await readdir(directoryPath, { withFileTypes: true });
+  const nestedSources = await Promise.all(
+    entries.map(async (entry) => {
+      const entryPath = path.join(directoryPath, entry.name);
+      if (entry.isDirectory()) {
+        return collectHtmlSources(entryPath);
+      }
+      if (entry.isFile() && entry.name.toLowerCase().endsWith(".html")) {
+        return [await readFile(entryPath, "utf8")];
+      }
+      return [];
+    }),
+  );
+  return nestedSources.flat();
+}
+
 async function copyLegacyRedirects(rootDir, outputDir, publishedPosts) {
   const blogDirectory = path.join(rootDir, "blog");
   const entries = await readdir(blogDirectory, { withFileTypes: true });
@@ -364,6 +382,13 @@ export async function buildSite({ rootDir, outputDir }) {
       path.join(outputDir, "blog", post.slug),
     );
   }
+
+  const htmlSources = await collectHtmlSources(outputDir);
+  await writeFile(
+    path.join(outputDir, "_headers"),
+    renderSecurityHeaders(htmlSources),
+    "utf8",
+  );
 
   return { manifest, publishedPosts };
 }
