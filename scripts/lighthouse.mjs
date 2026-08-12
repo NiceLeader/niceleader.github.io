@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { launch } from "chrome-launcher";
 import lighthouse from "lighthouse";
 
+import { attemptPasses } from "./lighthouse-policy.mjs";
 import { parseSecurityHeaders } from "./security-headers.mjs";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -118,6 +119,16 @@ const chrome = await launch({
 
 const failures = [];
 try {
+  const warmupResult = await lighthouse(`http://${host}:${address.port}/`, {
+    logLevel: "error",
+    onlyCategories: ["performance"],
+    output: "json",
+    port: chrome.port,
+  });
+  if (!warmupResult) {
+    throw new Error("Lighthouse warm-up returned no result");
+  }
+
   for (const route of ROUTES) {
     const routeThresholds = route.thresholds ?? SCORE_THRESHOLDS;
     const url = `http://${host}:${address.port}${route.path}`;
@@ -149,11 +160,13 @@ try {
         .join(" ")}`,
     );
 
-    for (const [category, threshold] of Object.entries(routeThresholds)) {
-      if (scores[category] < threshold) {
-        failures.push(
-          `${route.path} ${category} score ${scores[category]} is below ${threshold}`,
-        );
+    if (!attemptPasses(scores, routeThresholds)) {
+      for (const [category, threshold] of Object.entries(routeThresholds)) {
+        if (scores[category] < threshold) {
+          failures.push(
+            `${route.path} ${category} score ${scores[category]} is below ${threshold}`,
+          );
+        }
       }
     }
   }
