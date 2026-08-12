@@ -27,11 +27,22 @@ Post metadata and publication status live in `content/posts.json`:
 - `published` posts are copied and added to Home, Writing, RSS and the sitemap;
 - a missing source for a published post fails the build.
 
-The generated artifact, not the repository root, is the deployable site.
+The generated artifact, not the repository root, is the deployable site. The build
+also creates `_site/_headers` with a strict, hash-based Content Security Policy and
+the remaining production security headers. Inline sources are allowlisted by their
+SHA-256 hashes; `unsafe-inline` and `unsafe-eval` are intentionally forbidden.
 
-`.github/workflows/pages.yml` rebuilds and validates the site on `main`, then deploys
-only `_site/` through GitHub Pages. The Pages source must remain set to GitHub Actions;
-the legacy `main:/` source would expose unpublished source directories.
+Cloudflare Pages production settings:
+
+- production branch: `main`;
+- build command: `npm run check`;
+- build output directory: `_site`;
+- Node.js version: `22.22.0`.
+
+`.github/workflows/pages.yml` provides an artifact-only GitHub Pages deployment as a
+fallback. It rebuilds and validates the site on `main`, then deploys only `_site/`.
+GitHub Pages must remain set to GitHub Actions; the legacy `main:/` source would expose
+unpublished source directories.
 
 ## Quality gates
 
