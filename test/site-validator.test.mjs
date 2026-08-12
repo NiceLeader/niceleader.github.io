@@ -113,6 +113,26 @@ test("validator fails when unpublished posts leak into the deployment output", a
   assert.ok(issues.some((issue) => /unpublished post is present/i.test(issue.message)));
 });
 
+test("validator fails when an unpublished legacy redirect leaks into output", async () => {
+  const outputDir = await createValidSiteFixture();
+  await writeText(
+    path.join(outputDir, "blog", "draft.html"),
+    validPage({ canonical: "https://example.com/blog/draft/", title: "Draft redirect" }),
+  );
+
+  const issues = await validateBuiltSite({
+    outputDir,
+    publishedSlugs: ["published"],
+    unpublishedSlugs: ["draft"],
+  });
+
+  assert.ok(
+    issues.some(
+      (issue) => issue.file === "blog/draft.html" && /unpublished post is present/i.test(issue.message),
+    ),
+  );
+});
+
 test("validator fails when a published post is absent from output", async () => {
   const outputDir = await createValidSiteFixture();
 
