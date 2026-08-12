@@ -54,7 +54,7 @@ export function renderContentSecurityPolicy(htmlSources) {
   const policy = [
     directive("default-src", ["'none'"]),
     directive("base-uri", ["'none'"]),
-    directive("connect-src", [CLOUDFLARE_ANALYTICS_CONNECT_ORIGIN]),
+    directive("connect-src", ["'self'", CLOUDFLARE_ANALYTICS_CONNECT_ORIGIN]),
     directive("font-src", ["'self'"]),
     directive("form-action", ["'none'"]),
     directive("frame-ancestors", ["'none'"]),
