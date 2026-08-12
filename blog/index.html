@@ -1,10 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 <title>Writing - Maciej Lewandowski</title>
-<meta name="description" content="Field notes from custody and wallet infrastructure engineering: Bitcoin, EVM, Solana, and the backend systems that hold real money.">
+<meta name="description" content="Field notes from digital asset custody, wallet infrastructure, Bitcoin, EVM, Solana and backend systems that handle real money.">
 <link rel="canonical" href="https://maciejlewandowski.dev/blog/">
 <link rel="alternate" type="application/rss+xml" title="Maciej Lewandowski - Custody Engineering Notes" href="https://maciejlewandowski.dev/feed.xml">
 <meta property="og:type" content="website">
@@ -12,138 +13,60 @@
 <meta property="og:description" content="Field notes from custody and wallet infrastructure engineering.">
 <meta property="og:url" content="https://maciejlewandowski.dev/blog/">
 <meta property="og:image" content="https://maciejlewandowski.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Custody engineering field notes by Maciej Lewandowski">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="twitter:image:alt" content="Custody engineering field notes by Maciej Lewandowski">
 <meta name="theme-color" content="#0b0c0e">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root {
-  --bg: #ffffff; --fg: #17181a; --fg2: #6b7076; --fg3: #9ca1a8;
-  --line: #e8eaec; --link: #17181a;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b0c0e; --fg: #ebedef; --fg2: #979ca3; --fg3: #5f646b;
-    --line: #1e2125; --link: #ebedef;
-  }
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--bg); color: var(--fg);
-  font-size: 16px; line-height: 1.7; font-weight: 450;
-  -webkit-font-smoothing: antialiased;
-}
-.wrap { max-width: 660px; margin: 0 auto; padding: 0 24px; }
-nav { padding: 28px 0; display: flex; justify-content: space-between; align-items: baseline; }
-nav .brand { font-weight: 600; text-decoration: none; color: var(--fg); font-size: 0.95rem; }
-nav .menu a { color: var(--fg2); text-decoration: none; font-size: 0.9rem; margin-left: 18px; }
-nav .menu a:hover, nav .menu a.active { color: var(--fg); }
-header { padding: 48px 0 8px; }
-h1 { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.01em; }
-.sub { color: var(--fg2); margin-top: 6px; max-width: 560px; }
-section { padding: 22px 0 34px; }
-section:last-of-type { padding-bottom: 56px; }
-h2.track {
-  font-size: 0.78rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--fg3); margin-bottom: 4px;
-}
-.post { display: block; text-decoration: none; padding: 20px 0; border-top: 1px solid var(--line); }
-.post:last-of-type { border-bottom: 1px solid var(--line); }
-.post .pt { font-weight: 600; color: var(--fg); letter-spacing: -0.005em; }
-.post:hover .pt { text-decoration: underline; text-decoration-color: var(--fg3); text-underline-offset: 3px; }
-.post .pd { color: var(--fg2); font-size: 0.93rem; margin-top: 5px; line-height: 1.6; }
-.post time { color: var(--fg3); font-size: 0.85rem; display: block; margin-top: 7px; }
-footer { padding: 24px 0 72px; color: var(--fg3); font-size: 0.85rem; }
-footer a { color: var(--fg3); text-decoration: none; margin-right: 16px; }
-footer a:hover { color: var(--fg); }
-@media (max-width: 480px) {
-  nav { flex-direction: column; align-items: flex-start; gap: 10px; padding: 22px 0 18px; }
-  nav .menu a { margin-left: 0; margin-right: 18px; }
-}
-</style>
-<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"92728f4c07bb4620a6b29641e7008b91"}'></script>
 </head>
 <body>
+<a class="skip-link" href="#main-content">Skip to content</a>
 <div class="wrap">
+  <nav class="site-nav" aria-label="Primary">
+    <a class="brand" href="/">Maciej Lewandowski</a>
+    <div class="nav-links">
+      <a href="/services/">Services</a>
+      <a href="/blog/" aria-current="page">Writing</a>
+      <a href="https://github.com/NiceLeader">GitHub</a>
+      <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a>
+    </div>
+  </nav>
 
-<nav>
-  <a class="brand" href="/">Maciej Lewandowski</a>
-  <span class="menu">
-    <a href="/services/">Services</a>
-    <a href="/blog/" class="active">Writing</a>
-    <a href="https://github.com/NiceLeader">GitHub</a>
-    <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a>
-  </span>
-</nav>
+  <main id="main-content">
+    <header class="hero writing-header">
+      <p class="eyebrow">Custody engineering · Backend systems · Applied research</p>
+      <h1>Field notes from systems where edge cases move money.</h1>
+      <p class="lede">Bitcoin, EVM, Solana and the backend paths that turn chain state into
+      balances, transactions and evidence. Written for engineers who need the failure modes,
+      not a product overview.</p>
+      <p class="proof">Also available via <a href="/feed.xml">RSS</a>.</p>
+    </header>
 
-<header>
-  <h1>Writing</h1>
-  <p class="sub">Field notes from building systems that handle money: custody and wallet
-  infrastructure, and whatever else I am taking apart at the time.
-  Also available via <a href="/feed.xml" style="color:var(--fg2)">RSS</a>.</p>
-</header>
+<!-- BLOG_POSTS_START -->
+    <section class="section">
+      <h2 class="section-label">Published notes</h2>
+      <a class="post" href="/blog/deposit-detection/">
+        <div class="pt">Why Your Deposit Detection Misses Money</div>
+        <div class="pd">Proxy contracts, reorgs and the paths naive scanners miss.</div>
+        <time datetime="2026-07-22">Jul 2026</time>
+      </a>
+    </section>
+<!-- BLOG_POSTS_END -->
+  </main>
 
-<section>
-  <h2 class="track">Custody engineering</h2>
-  <a class="post" href="/blog/point-in-time-balances/">
-    <div class="pt">Balance at 14:00 UTC Does Not Exist</div>
-    <div class="pd">Chains never close, so a point-in-time balance has to be derived, not
-    queried. The anchor problem, the per-chain traps, and why reproducibility is the
-    real requirement.</div>
-    <time>August 2026</time>
-  </a>
-  <a class="post" href="/blog/deposit-detection/">
-    <div class="pt">Why Your Deposit Detection Misses Money</div>
-    <div class="pd">Proxy contracts, fee-on-transfer tokens, reorgs, UTXO edge cases and
-    Solana token accounts - and why continuous reconciliation is the only real fix.</div>
-    <time>July 2026</time>
-  </a>
-  <a class="post" href="/blog/transaction-state-machines/">
-    <div class="pt">Transaction State Machines for Multi-Chain Custody</div>
-    <div class="pd">Broadcast is not done, confirmed is not final, and retries are where
-    money gets lost. What breaks, chain by chain.</div>
-    <time>July 2026</time>
-  </a>
-  <a class="post" href="/blog/utxo-coin-selection/">
-    <div class="pt">UTXO Coin Selection in Production</div>
-    <div class="pd">Your Bitcoin balance is not a number, it is a set. Fees, dust, privacy
-    and the concurrency problem the tutorials skip.</div>
-    <time>July 2026</time>
-  </a>
-  <a class="post" href="/blog/stuck-transactions/">
-    <div class="pt">Stuck Transactions at Scale</div>
-    <div class="pd">RBF, CPFP, nonce queues, expiring blockhashes and the pinning problem -
-    a remediation playbook for transactions that will not confirm.</div>
-    <time>July 2026</time>
-  </a>
-</section>
-
-<section>
-  <h2 class="track">Engineering notes</h2>
-  <a class="post" href="/blog/rust-money-types/">
-    <div class="pt">Money in Rust: Making Illegal States Unrepresentable</div>
-    <div class="pd">Newtypes, phantom-typed currencies, checked arithmetic and typestate -
-    how much of a financial bug class the compiler can take off your hands, for zero bytes.</div>
-    <time>July 2026</time>
-  </a>
-  <a class="post" href="/blog/backtest-lies/">
-    <div class="pt">Your Backtest Is Lying to You</div>
-    <div class="pd">Look-ahead bias, survivorship, point-in-time data and overfitting -
-    why a backtest is a replay engine, and what that demands of it.</div>
-    <time>July 2026</time>
-  </a>
-</section>
-
-<footer>
-  <a href="/">Home</a>
-  <a href="/feed.xml">RSS</a>
-  <span style="float:right">&copy; 2026 Maciej Lewandowski</span>
-</footer>
-
+  <footer class="site-footer">
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="/services/">Services</a>
+      <a href="/feed.xml">RSS</a>
+    </div>
+    <span>© 2026 Maciej Lewandowski</span>
+  </footer>
 </div>
 </body>
 </html>

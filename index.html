@@ -1,24 +1,27 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 <title>Maciej Lewandowski - Senior Blockchain Engineer</title>
-<meta name="description" content="Maciej Lewandowski - Senior Blockchain Engineer specializing in custody &amp; wallet infrastructure, Solana, EVM, Bitcoin and enterprise DLT. Java/Spring, TypeScript/NestJS, Rust. Based in Poland.">
+<meta name="description" content="Senior blockchain engineer for digital asset custody, wallet infrastructure and tokenization across Bitcoin, EVM and Solana. Remote, global B2B.">
 <link rel="canonical" href="https://maciejlewandowski.dev/">
 <link rel="alternate" type="application/rss+xml" title="Maciej Lewandowski - Custody Engineering Notes" href="https://maciejlewandowski.dev/feed.xml">
 <meta property="og:type" content="profile">
 <meta property="og:title" content="Maciej Lewandowski - Senior Blockchain Engineer">
-<meta property="og:description" content="Custody &amp; wallet infrastructure &middot; Solana &middot; EVM &middot; Bitcoin &middot; Enterprise DLT. 7+ years building production systems for fintech and regulated institutions.">
+<meta property="og:description" content="Custody and wallet infrastructure for systems that hold and move real money.">
 <meta property="og:url" content="https://maciejlewandowski.dev/">
 <meta property="og:image" content="https://maciejlewandowski.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Maciej Lewandowski - Senior Blockchain Engineer">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="twitter:image:alt" content="Maciej Lewandowski - Senior Blockchain Engineer">
 <meta name="theme-color" content="#0b0c0e">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -32,235 +35,150 @@
   ],
   "address": { "@type": "PostalAddress", "addressCountry": "PL" },
   "knowsAbout": [
-    "Blockchain", "Digital Asset Custody", "Wallet Infrastructure",
-    "Solana", "Rust", "Ethereum", "EVM", "Bitcoin", "Hyperledger Besu",
-    "Canton Network", "Java", "Spring Boot", "TypeScript", "NestJS",
-    "Smart Contracts", "DeFi", "Multi-signature", "MPC"
+    "Digital Asset Custody", "Wallet Infrastructure", "Tokenization",
+    "Solana", "Rust", "EVM", "Bitcoin", "Enterprise DLT",
+    "Java", "Spring Boot", "TypeScript", "NestJS"
   ]
 }
 </script>
-<style>
-:root {
-  --bg: #ffffff; --fg: #17181a; --fg2: #6b7076; --fg3: #9ca1a8;
-  --line: #e8eaec; --link: #17181a;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b0c0e; --fg: #ebedef; --fg2: #979ca3; --fg3: #5f646b;
-    --line: #1e2125; --link: #ebedef;
-  }
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--bg); color: var(--fg);
-  font-size: 16px; line-height: 1.7; font-weight: 450;
-  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
-}
-.wrap { max-width: 660px; margin: 0 auto; padding: 0 24px; }
-
-nav.top { padding: 28px 0 0; display: flex; justify-content: flex-end; }
-nav.top a { color: var(--fg3); text-decoration: none; font-size: 0.9rem; margin-left: 18px; }
-nav.top a:hover { color: var(--fg); }
-
-header { padding: 84px 0 24px; }
-h1 { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.01em; }
-.role { color: var(--fg2); margin-top: 2px; }
-
-.intro { padding: 36px 0 8px; }
-.intro p { margin-bottom: 20px; color: var(--fg); max-width: 620px; }
-.intro p.dim { color: var(--fg2); }
-a { color: var(--link); text-decoration: underline; text-decoration-color: var(--fg3); text-underline-offset: 3px; transition: text-decoration-color .15s; }
-a:hover { text-decoration-color: var(--fg); }
-
-section { padding: 44px 0 4px; }
-h2 {
-  font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--fg3); margin-bottom: 26px;
-}
-
-dl.exp > div { display: grid; grid-template-columns: 200px 1fr; gap: 8px 32px; padding: 17px 0; border-top: 1px solid var(--line); }
-dl.exp > div:last-child { border-bottom: 1px solid var(--line); }
-dl.exp dt { font-weight: 600; font-size: 0.95rem; letter-spacing: -0.005em; }
-dl.exp dd { color: var(--fg2); font-size: 0.95rem; line-height: 1.65; }
-@media (max-width: 560px) { dl.exp > div { grid-template-columns: 1fr; gap: 4px; } }
-
-.stack p { color: var(--fg2); font-size: 0.95rem; margin-bottom: 8px; }
-.stack b { color: var(--fg); font-weight: 600; font-size: 0.9rem; }
-
-.posts { list-style: none; }
-.posts li { padding: 15px 0; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; gap: 24px; }
-.posts li:last-child { border-bottom: 1px solid var(--line); }
-.posts a { font-weight: 500; text-decoration: none; }
-.posts a:hover { text-decoration: underline; text-decoration-color: var(--fg3); text-underline-offset: 3px; }
-.posts time { color: var(--fg3); font-size: 0.85rem; white-space: nowrap; }
-
-.contact p { color: var(--fg2); }
-footer { padding: 64px 0 72px; color: var(--fg3); font-size: 0.85rem; }
-footer a { color: var(--fg3); text-decoration: none; margin-right: 16px; }
-footer a:hover { color: var(--fg); }
-
-@media (max-width: 620px) { header { padding: 80px 0 16px; } }
-</style>
-<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"92728f4c07bb4620a6b29641e7008b91"}'></script>
 </head>
 <body>
+<a class="skip-link" href="#main-content">Skip to content</a>
 <div class="wrap">
+  <nav class="site-nav" aria-label="Primary">
+    <a class="brand" href="/" aria-current="page">Maciej Lewandowski</a>
+    <div class="nav-links">
+      <a href="/services/">Services</a>
+      <a href="/blog/">Writing</a>
+      <a href="https://github.com/NiceLeader">GitHub</a>
+      <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a>
+    </div>
+  </nav>
 
-<nav class="top">
-  <a href="/services/">Services</a>
-  <a href="/blog/">Writing</a>
-  <a href="https://github.com/NiceLeader">GitHub</a>
-  <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a>
-</nav>
+  <main id="main-content">
+    <header class="hero">
+      <p class="eyebrow">Senior Blockchain Engineer · Poland · Global B2B</p>
+      <h1>Custody infrastructure for systems that hold real money.</h1>
+      <p class="lede">I design and build the backend paths that hold and move digital assets:
+      key management, signing, transaction lifecycle, reconciliation and multi-chain
+      integrations for startups and regulated financial institutions.</p>
+      <p class="proof">Seven-plus years across blockchain, fintech and enterprise backends.
+      Bitcoin, EVM, Solana and permissioned networks.</p>
+      <div class="actions">
+        <a class="action-primary" href="/services/">View services</a>
+        <a class="action-secondary" href="mailto:contact@maciejlewandowski.dev">Discuss a project</a>
+      </div>
+    </header>
 
-<header>
-  <h1>Maciej Lewandowski</h1>
-  <p class="role">Senior Blockchain Engineer</p>
-</header>
+    <section class="section" aria-labelledby="selected-work-heading">
+      <h2 class="section-label" id="selected-work-heading">Selected work</h2>
+      <dl class="rows">
+        <div>
+          <dt>Bank tokenization platform</dt>
+          <dd>Architected seven-plus Java and Spring Boot services covering token operations,
+          payments, scheduling and reconciliation with a bank core system. Delivered live
+          migrations on a running platform with zero post-merge production regressions.</dd>
+        </div>
+        <div>
+          <dt>Solana token infrastructure</dt>
+          <dd>Built Token-2022 flows, Meteora liquidity, Jupiter swaps, Squads Multisig V4
+          governance and GCP KMS-backed signing as one end-to-end operating path.</dd>
+        </div>
+        <div>
+          <dt>Enterprise DLT networks</dt>
+          <dd>Delivered permissioned financial networks with Hyperledger Besu, GoQuorum,
+          Canton/Daml, FireFly and Kaleido across Terraform-managed environments.</dd>
+        </div>
+        <div>
+          <dt>WORK token launch</dt>
+          <dd>Led development of the WORK token at Paidwork, reducing transaction costs by
+          99% for a 17-million-user platform through L2 rollups. The contract was publicly
+          audited. <a href="https://coinmarketcap.com/currencies/worken/">CoinMarketCap</a>
+          · <a href="https://bigshortbets.com/audit/">audit</a></dd>
+        </div>
+      </dl>
+    </section>
 
-<div class="intro">
-  <p>I build the backend systems that hold and move digital assets: custody and wallet
-  infrastructure, tokenization platforms and multi-chain integrations, for startups and
-  regulated financial institutions.</p>
-  <p class="dim">Seven-plus years across blockchain, fintech and enterprise backends.
-  Based in Poland, working globally, B2B.
-  <a href="https://www.linkedin.com/in/maciejlewandowsky/" rel="me">LinkedIn</a> &middot;
-  <a href="https://github.com/NiceLeader" rel="me">GitHub</a></p>
-</div>
+    <section class="section" aria-labelledby="expertise-heading">
+      <h2 class="section-label" id="expertise-heading">What I work on</h2>
+      <dl class="rows">
+        <div>
+          <dt>Custody and wallets</dt>
+          <dd>KMS/HSM signing, multisig and MPC coordination, policy engines, deposit
+          detection, transaction state machines, reorg handling and ledger reconciliation.</dd>
+        </div>
+        <div>
+          <dt>Multi-chain systems</dt>
+          <dd>Bitcoin and UTXO semantics, EVM and account abstraction, Solana programs and
+          token accounts — without forcing one chain's model onto another.</dd>
+        </div>
+        <div>
+          <dt>Fintech backend</dt>
+          <dd>Java/Spring Boot and TypeScript/NestJS microservices, event-driven systems,
+          PostgreSQL ledgers and high-integrity transactional workflows.</dd>
+        </div>
+        <div>
+          <dt>AI-assisted delivery</dt>
+          <dd>Agent workflows, MCP servers and review automation with deterministic
+          guardrails, explicit evidence and human accountability for the final result.</dd>
+        </div>
+      </dl>
+    </section>
 
-<section>
-  <h2>Work</h2>
-  <dl class="exp">
-    <div>
-      <dt>Custody &amp; wallet infrastructure</dt>
-      <dd>Key management and signing flows (KMS/HSM), multisig and MPC coordination,
-      policy engines, transaction lifecycle and reconciliation, deposit detection
-      across Bitcoin, EVM chains and Solana.</dd>
-    </div>
-    <div>
-      <dt>Solana</dt>
-      <dd>Rust and Anchor. Token-2022, SPL and associated token account flows,
-      Squads multisig, Meteora CP-AMM, Jupiter Swap, Helius RPC.</dd>
-    </div>
-    <div>
-      <dt>EVM &amp; payment rails</dt>
-      <dd>Solidity, ERC-20 and ERC-4337 account abstraction, stablecoin flows
-      (USDC/USDT), Wagmi, Viem, WalletConnect, fiat on- and off-ramp integrations.</dd>
-    </div>
-    <div>
-      <dt>Enterprise DLT</dt>
-      <dd>Hyperledger Besu and GoQuorum (QBFT), Canton Network (Daml), Firefly
-      middleware, Kaleido. Permissioned networks for financial institutions.</dd>
-    </div>
-    <div>
-      <dt>Fintech backend</dt>
-      <dd>Java and Spring Boot microservices, TypeScript and NestJS, event-driven
-      architectures, ledger design, high-integrity transactional systems.</dd>
-    </div>
-    <div>
-      <dt>AI-assisted delivery</dt>
-      <dd>Multi-agent development workflows, MCP servers and automation pipelines,
-      with the judgement to review and verify AI-generated output.</dd>
-    </div>
-  </dl>
-</section>
+    <section class="section" aria-labelledby="writing-heading">
+      <h2 class="section-label" id="writing-heading"><a href="/blog/">Writing</a></h2>
+      <p class="section-intro">Field notes from systems where a missed edge case can move
+      money, corrupt a ledger or produce evidence nobody can reproduce.</p>
+      <ul class="posts">
+<!-- HOME_POSTS_START -->
+        <li><a href="/blog/rust-money-types/">Money in Rust: Making Illegal States Unrepresentable</a><time datetime="2026-07-25">Jul 2026</time></li>
+<!-- HOME_POSTS_END -->
+      </ul>
+    </section>
 
-<section class="stack">
-  <h2>Stack</h2>
-  <p><b>Blockchain</b> &nbsp; Solana, Rust, Anchor, Solidity, Hyperledger Besu, GoQuorum, Canton/Daml, Firefly, Kaleido</p>
-  <p><b>Web3</b> &nbsp; Ethers, Wagmi, Viem, SIWE, ERC-4337, WalletConnect, Hardhat, Foundry</p>
-  <p><b>Backend</b> &nbsp; TypeScript, NestJS, Node, Java, Spring Boot, Python</p>
-  <p><b>Data</b> &nbsp; PostgreSQL, RabbitMQ, Redis, IPFS, Liquibase</p>
-  <p><b>Infra</b> &nbsp; AWS, GCP, Kubernetes, Terraform, Docker, ArgoCD, Helm, Azure DevOps</p>
-</section>
+    <section class="section" aria-labelledby="stack-heading">
+      <h2 class="section-label" id="stack-heading">Working stack</h2>
+      <div class="compact-list">
+        <p><strong>Blockchain</strong>Solana, Rust, Anchor, Solidity, Besu, GoQuorum, Canton/Daml</p>
+        <p><strong>Backend</strong>Java, Spring Boot, TypeScript, NestJS, Node, Python</p>
+        <p><strong>Data</strong>PostgreSQL, RabbitMQ, Redis, Liquibase, IPFS</p>
+        <p><strong>Delivery</strong>AWS, GCP, Kubernetes, Terraform, Docker, ArgoCD, Helm</p>
+      </div>
+    </section>
 
-<section>
-  <h2>Selected work</h2>
-  <dl class="exp">
-    <div>
-      <dt>Tokenization platform inside a bank</dt>
-      <dd>Architected a microservices platform (7+ Java / Spring Boot services) covering token
-      operations, payments, scheduling and orchestration, bridged to the bank's core banking
-      system via REST contracts and transaction reconciliation flows. Live migrations on a
-      running system, zero post-merge production regressions.</dd>
-    </div>
-    <div>
-      <dt>Solana token infrastructure</dt>
-      <dd>End-to-end token stack: Token-2022, Meteora CP-AMM liquidity, Jupiter swaps,
-      Squads Multisig V4 governance and GCP KMS-backed signing.</dd>
-    </div>
-    <div>
-      <dt>Web3 payment rails</dt>
-      <dd>Stablecoin payment flows (USDC/USDT), x402 protocol, ERC-4337 account abstraction,
-      fiat on/off-ramp integrations and wallet connectivity (Wagmi, Viem, WalletConnect).</dd>
-    </div>
-    <div>
-      <dt>Enterprise DLT networks</dt>
-      <dd>Permissioned networks for financial institutions: Hyperledger Besu and GoQuorum
-      (QBFT), Canton Network (Daml), Firefly middleware and Kaleido, with Terraform-managed
-      multi-environment infrastructure.</dd>
-    </div>
-    <div>
-      <dt>WORK token launch</dt>
-      <dd>Initiated and led development of the WORK token at Paidwork: top-3000 ranking on
-      CoinMarketCap, transaction costs reduced by 99% for 17 million users via L2 rollups,
-      contract security audited publicly.
-      <a href="https://coinmarketcap.com/currencies/worken/">CoinMarketCap</a> &middot;
-      <a href="https://bigshortbets.com/audit/">audit</a></dd>
-    </div>
-    <div>
-      <dt>Bitcoin mining infrastructure</dt>
-      <dd>Built large-scale infrastructure for one of the largest Bitcoin mining
-      facilities: BTC and Litecoin merge mining (Elcash, BTCV, Dogecoin) and token
-      maintenance on Bitcoin forks.</dd>
-    </div>
-  </dl>
-</section>
+    <section class="section" aria-labelledby="background-heading">
+      <h2 class="section-label" id="background-heading">Background</h2>
+      <dl class="rows">
+        <div>
+          <dt>Software house co-founder</dt>
+          <dd>Co-founded and ran a 15-developer software house across architecture,
+          delivery, budgeting and client relationships.</dd>
+        </div>
+        <div>
+          <dt>Education</dt>
+          <dd>B.Eng. in Computer Science, Artificial Intelligence specialization, GPA 5.0.
+          Certified Ethereum Expert and Certified Ethereum Developer.</dd>
+        </div>
+      </dl>
+    </section>
 
-<section>
-  <h2>Background</h2>
-  <dl class="exp">
-    <div>
-      <dt>Software house co-founder</dt>
-      <dd>Co-founded and ran a software house with a team of 15 developers: architecture,
-      delivery, budgeting and client relationships end to end.</dd>
+    <section class="contact-panel" aria-labelledby="contact-heading">
+      <h2 id="contact-heading">Need a custody system reviewed or untangled?</h2>
+      <p>See <a href="/services/">fixed-scope engagements</a>, write to
+      <a href="mailto:contact@maciejlewandowski.dev">contact@maciejlewandowski.dev</a>
+      or reach me on <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a>.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-links">
+      <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a>
+      <a href="https://github.com/NiceLeader">GitHub</a>
+      <a href="/feed.xml">RSS</a>
     </div>
-    <div>
-      <dt>Education &amp; certifications</dt>
-      <dd>B.Eng. in Computer Science, specialization in Artificial Intelligence (GPA 5.0).
-      Certified Ethereum Expert and Certified Ethereum Developer (Blockchain Council).</dd>
-    </div>
-  </dl>
-</section>
-
-<section>
-  <h2><a href="/blog/" style="color:inherit;text-decoration:none">Writing</a></h2>
-  <ul class="posts">
-    <li><a href="/blog/rust-money-types/">Money in Rust: Making Illegal States Unrepresentable</a><time>Jul 2026</time></li>
-    <li><a href="/blog/backtest-lies/">Your Backtest Is Lying to You</a><time>Jul 2026</time></li>
-    <li><a href="/blog/deposit-detection/">Why Your Deposit Detection Misses Money</a><time>Jul 2026</time></li>
-    <li><a href="/blog/transaction-state-machines/">Transaction State Machines for Multi-Chain Custody</a><time>Jul 2026</time></li>
-    <li><a href="/blog/utxo-coin-selection/">UTXO Coin Selection in Production</a><time>Jul 2026</time></li>
-    <li><a href="/blog/stuck-transactions/">Stuck Transactions at Scale</a><time>Jul 2026</time></li>
-  </ul>
-</section>
-
-<section class="contact">
-  <h2>Contact</h2>
-  <p>Open to senior blockchain and backend engineering engagements (B2B) -
-  see <a href="/services/">what I offer</a>.
-  Write to <a href="mailto:contact@maciejlewandowski.dev">contact@maciejlewandowski.dev</a>
-  or reach me on <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a>.</p>
-</section>
-
-<footer>
-  <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a>
-  <a href="https://github.com/NiceLeader">GitHub</a>
-  <a href="/feed.xml">RSS</a>
-  <span style="float:right">&copy; 2026 Maciej Lewandowski</span>
-</footer>
-
+    <span>© 2026 Maciej Lewandowski</span>
+  </footer>
 </div>
 </body>
 </html>

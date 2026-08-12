@@ -109,10 +109,10 @@
     {
       "slug": "point-in-time-balances",
       "title": "Balance at 14:00 UTC Does Not Exist",
-      "description": "Chains never close, so balance at a point in time has to be derived, anchored and reproducible.",
+      "description": "Chains never close, so a point-in-time balance has to be derived, not queried. The anchor problem, the per-chain traps, and why reproducibility is the real requirement.",
       "date": "2026-08-12",
       "track": "Custody engineering",
-      "status": "draft"
+      "status": "published"
     },
     {
       "slug": "sighash-policy",

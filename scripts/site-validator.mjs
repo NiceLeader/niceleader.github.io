@@ -40,7 +40,7 @@ function getTitle(source) {
   return source.match(/<title>([^<]+)<\/title>/i)?.[1]?.trim() ?? "";
 }
 
-function validateDocumentContract(relativePath, source) {
+function validateDocumentContract(relativePath, source, hasSharedFocusStyle) {
   const issues = [];
   const isNotFoundPage = relativePath.replaceAll("\\", "/") === "404.html";
 
@@ -71,7 +71,7 @@ function validateDocumentContract(relativePath, source) {
   if (!/<a\s[^>]*class=["'][^"']*skip-link/i.test(source)) {
     issues.push(createIssue(relativePath, "Missing skip link"));
   }
-  if (!/:focus-visible\b/i.test(source)) {
+  if (!hasSharedFocusStyle && !/:focus-visible\b/i.test(source)) {
     issues.push(createIssue(relativePath, "Missing explicit focus-visible style"));
   }
   if (/<time(?![^>]*\bdatetime=)[^>]*>/i.test(source)) {
@@ -179,6 +179,7 @@ function validateUniqueTitles(htmlFiles, sourcesByFile) {
 export async function validateBuiltSite({ outputDir, publishedSlugs, unpublishedSlugs }) {
   const files = await collectFiles(outputDir);
   const htmlFiles = files.filter((file) => file.toLowerCase().endsWith(".html"));
+  const cssFiles = files.filter((file) => file.toLowerCase().endsWith(".css"));
   const sourcesByFile = new Map();
 
   await Promise.all(
@@ -188,11 +189,16 @@ export async function validateBuiltSite({ outputDir, publishedSlugs, unpublished
     }),
   );
 
+  const cssSources = await Promise.all(
+    cssFiles.map((relativePath) => readFile(path.join(outputDir, relativePath), "utf8")),
+  );
+  const hasSharedFocusStyle = cssSources.some((source) => /:focus-visible\b/i.test(source));
+
   const issues = [];
   for (const relativePath of htmlFiles) {
     const source = sourcesByFile.get(relativePath);
     if (!isRedirectPage(source)) {
-      issues.push(...validateDocumentContract(relativePath, source));
+      issues.push(...validateDocumentContract(relativePath, source, hasSharedFocusStyle));
     }
   }
 

@@ -206,7 +206,12 @@ async function copyDirectory(sourceDirectory, destinationDirectory) {
       continue;
     }
     if (entry.isFile()) {
-      await copyFile(sourcePath, destinationPath);
+      if (entry.name.toLowerCase().endsWith(".html")) {
+        const htmlSource = await readFile(sourcePath, "utf8");
+        await writeFile(destinationPath, htmlSource.replace(/^\uFEFF/, ""), "utf8");
+      } else {
+        await copyFile(sourcePath, destinationPath);
+      }
     }
   }
 }
@@ -338,6 +343,9 @@ export async function buildSite({ rootDir, outputDir }) {
   await writeFile(path.join(outputDir, ".nojekyll"), "", "utf8");
 
   await copyDirectory(path.join(rootDir, "services"), path.join(outputDir, "services"));
+  if (await pathExists(path.join(rootDir, "assets"))) {
+    await copyDirectory(path.join(rootDir, "assets"), path.join(outputDir, "assets"));
+  }
   await copyLegacyRedirects(rootDir, outputDir);
   await Promise.all(STATIC_FILES.map((file) => copyFileWhenPresent(rootDir, outputDir, file)));
 
