@@ -93,3 +93,37 @@ export function renderSecurityHeaders(htmlSources) {
   X-Frame-Options: DENY
 `;
 }
+
+export function parseSecurityHeaders(headersSource) {
+  const lines = headersSource.trimEnd().split(/\r?\n/);
+  if (lines.shift()?.trim() !== "/*") {
+    throw new Error("Security headers must use a single global /* rule");
+  }
+
+  const headers = Object.create(null);
+  for (const line of lines) {
+    if (line.trim() === "") {
+      continue;
+    }
+    if (!/^\s/.test(line)) {
+      throw new Error("Security headers must use a single global /* rule");
+    }
+
+    const separatorIndex = line.indexOf(":");
+    const headerName = line.slice(0, separatorIndex).trim();
+    const headerValue = line.slice(separatorIndex + 1).trim();
+    if (
+      separatorIndex < 1 ||
+      !/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/.test(headerName) ||
+      headerValue === ""
+    ) {
+      throw new Error(`Invalid security header line: ${line.trim()}`);
+    }
+    if (Object.hasOwn(headers, headerName)) {
+      throw new Error(`Duplicate security header: ${headerName}`);
+    }
+    headers[headerName] = headerValue;
+  }
+
+  return headers;
+}

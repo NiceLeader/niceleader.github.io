@@ -1,11 +1,13 @@
 import { createReadStream } from "node:fs";
-import { access, mkdir, stat, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { launch } from "chrome-launcher";
 import lighthouse from "lighthouse";
+
+import { parseSecurityHeaders } from "./security-headers.mjs";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outputDirectory = path.join(projectRoot, "_site");
@@ -63,7 +65,7 @@ function resolveRequestPath(requestUrl) {
   return resolvedPath;
 }
 
-function createStaticServer() {
+function createStaticServer(securityHeaders) {
   return createServer(async (request, response) => {
     try {
       const requestedPath = resolveRequestPath(request.url ?? "/");
@@ -74,6 +76,7 @@ function createStaticServer() {
       }
 
       response.writeHead(200, {
+        ...securityHeaders,
         "Cache-Control": "no-store",
         "Content-Type": MIME_TYPES.get(path.extname(requestedPath).toLowerCase()) ?? "application/octet-stream",
       });
@@ -99,7 +102,10 @@ function closeServer(server) {
   });
 }
 
-const server = createStaticServer();
+const securityHeaders = parseSecurityHeaders(
+  await readFile(path.join(outputDirectory, "_headers"), "utf8"),
+);
+const server = createStaticServer(securityHeaders);
 const address = await listen(server);
 if (!address || typeof address === "string") {
   throw new Error("Static audit server did not expose a TCP port");
