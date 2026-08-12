@@ -158,6 +158,15 @@ test("build output is deterministic", async () => {
   assert.deepEqual(secondContents, firstContents);
 });
 
+test("build omits the provider-specific GitHub Pages CNAME file", async () => {
+  const { outputDir, rootDir } = await createFixture();
+
+  await buildSite({ rootDir, outputDir });
+
+  const files = await listFiles(outputDir);
+  assert.ok(!files.includes("CNAME"));
+});
+
 test("build generates strict security headers for every inline source", async () => {
   const { inlineScript, inlineStyle, outputDir, rootDir, styleAttribute } =
     await createFixture();

@@ -16,6 +16,11 @@ test("production workflow deploys only the verified artifact to Cloudflare Pages
   assert.match(workflow, /npm run lighthouse/);
   assert.match(
     workflow,
+    /deploy:\s*\n\s+if: \$\{\{ github\.ref == 'refs\/heads\/main' \}\}\s*\n\s+environment:/,
+  );
+  assert.match(workflow, /environment:\s*\n\s+name: production/);
+  assert.match(
+    workflow,
     /cloudflare\/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0/,
   );
   assert.match(workflow, /wranglerVersion: "4\.122\.0"/);
