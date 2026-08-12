@@ -1,0 +1,214 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Balance at 14:00 UTC Does Not Exist - Maciej Lewandowski</title>
+<meta name="description" content="Chains never close, so 'balance at a point in time' has to be derived, not queried. The anchor problem, per-chain traps, and why reproducibility is the actual requirement.">
+<link rel="canonical" href="https://maciejlewandowski.dev/blog/point-in-time-balances/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Balance at 14:00 UTC Does Not Exist">
+<meta property="og:description" content="Chains never close, so 'balance at a point in time' has to be derived, not queried. Why every naive scanner gets it wrong.">
+<meta property="og:url" content="https://maciejlewandowski.dev/blog/point-in-time-balances/">
+<meta property="og:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Balance at 14:00 UTC Does Not Exist",
+  "datePublished": "2026-08-12",
+  "author": { "@type": "Person", "name": "Maciej Lewandowski", "url": "https://maciejlewandowski.dev/" },
+  "publisher": { "@type": "Person", "name": "Maciej Lewandowski" },
+  "mainEntityOfPage": "https://maciejlewandowski.dev/blog/point-in-time-balances/"
+}
+</script>
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f6f8fa; --fg: #1f2328; --fg2: #59636e;
+  --accent: #0969da; --border: #d1d9e0; --code: #f6f8fa;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --fg: #e6edf3; --fg2: #9198a1;
+    --accent: #58a6ff; --border: #30363d; --code: #161b22;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--fg); line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+nav { padding: 28px 0; }
+nav a { color: var(--fg2); text-decoration: none; font-size: 0.95rem; }
+nav a:hover { color: var(--accent); }
+article { padding: 16px 0 64px; }
+h1 { font-size: 2.1rem; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
+.meta { color: var(--fg2); font-size: 0.92rem; margin-bottom: 36px; }
+h2 { font-size: 1.4rem; margin: 40px 0 14px; letter-spacing: -0.01em; }
+p { margin-bottom: 18px; }
+ul, ol { margin: 0 0 18px 26px; }
+li { margin-bottom: 8px; }
+code {
+  background: var(--code); border: 1px solid var(--border); border-radius: 5px;
+  padding: 2px 6px; font-size: 0.88em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+strong { font-weight: 600; }
+.callout {
+  border-left: 3px solid var(--accent); background: var(--bg2);
+  padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 18px; color: var(--fg);
+}
+footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
+footer a { color: var(--accent); text-decoration: none; }
+a { color: var(--accent); }
+</style>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
+</head>
+<body>
+<div class="wrap">
+
+<nav><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/blog/">All posts</a></nav>
+
+<article>
+<h1>Balance at 14:00 UTC Does Not Exist</h1>
+<p class="meta">Maciej Lewandowski &middot; August 2026 &middot; Field notes from custody &amp; wallet infrastructure</p>
+
+<p>"What was the balance of this address at 14:00 UTC on June 30th?"</p>
+
+<p>Every audit asks this. Every quarterly statement implies it. Every ledger-vs-chain
+reconciliation starts with it. And no blockchain can answer it, because a chain never
+closes. There is no end of day, no statement cut-off, no snapshot. Blocks arrive when
+they arrive, and "balance at a point in time" is a concept from accounting, not from
+consensus.</p>
+
+<p>So the number has to be derived. The derivation is harder than it looks, the naive
+versions go wrong in production, and one property separates an answer you can defend
+from a number your script printed once.</p>
+
+<h2>The shortcuts fail first</h2>
+
+<p>Both obvious answers are dead ends.</p>
+
+<p><strong>"Check the explorer."</strong> Explorers disagree with each other, apply
+their own interpretation of internal transfers and token events, and mostly cannot
+answer historical questions at all. And an auditor cannot re-run an explorer. Whatever
+you saw on a website is not evidence, it is a screenshot.</p>
+
+<p><strong>"Query the node."</strong> Closer, but the default node has no memory. On
+EVM chains, balance-at-block-N needs an archive node; the standard RPC you are paying
+for keeps recent state only. On Solana it is worse: the RPC will not give you
+account state at an old slot. If you did not capture it when it was current, you are
+reconstructing it from transaction history. Bitcoin keeps everything, but what it keeps
+is UTXOs, and turning a UTXO set plus a descriptor into "the balance of this customer"
+is its own project.</p>
+
+<h2>The anchor problem</h2>
+
+<p>Before deriving anything, you have to decide what "14:00 UTC" even means on each
+chain, and that decision has more edges than any other part of the problem.</p>
+
+<p>A timestamp does not name a block. You have to pick one: the last block at or before
+the cut-off. On Bitcoin, block header timestamps are not even monotonic - a block can
+carry an earlier timestamp than its parent - so "the block before 14:00" needs a
+defined rule, not a naive binary search. On EVM you get to choose between the head of
+the chain and the <code>finalized</code> tag, and only one of those survives a reorg.
+On Solana you are choosing a slot and a commitment level.</p>
+
+<p>Then comes the part that most home-grown scripts skip entirely: the anchor has to be
+<strong>consistent across chains</strong>. A portfolio holds BTC, three EVM chains and
+Solana. If each chain's balance is read at whatever height the script happened to reach,
+the "total at 14:00" is five readings taken at five different times, presented as one
+number. For a trading desk that might be tolerable. For a safeguarding report it is
+wrong by construction.</p>
+
+<div class="callout">The anchor - block hash and height, or slot - is part of the
+answer. A balance without its anchor is a rumor. Record it, and anyone can stand at the
+same point in history and check your work.</div>
+
+<h2>Per-chain, the ways the derivation lies</h2>
+
+<p>Once the anchor is fixed, each chain family produces a wrong number in its own
+way.</p>
+
+<ul>
+<li><strong>Bitcoin:</strong> balances live in UTXOs, and addresses come from
+descriptors and xpubs with gap limits your scan must respect, or you silently miss
+addresses that hold money. One transaction can pay the same address three times; count
+transactions instead of outputs and you undercount. Coinbase outputs are unspendable for
+100 blocks, which matters if you are valuing what is actually available.</li>
+<li><strong>EVM:</strong> <code>tx.to</code> lies. ERC-20 balances need
+<code>Transfer</code> logs, native ETH moved by internal calls only shows up in traces,
+and fee-on-transfer tokens make the event value wrong by design - the delta is the
+truth. Proxies change semantics under your feet on upgrade day. I wrote about the
+deposit-side version of this in
+<a href="/blog/deposit-detection/">Why Your Deposit Detection Misses Money</a>; every one
+of those failure paths also corrupts a historical balance.</li>
+<li><strong>Solana:</strong> SPL deposits land on Associated Token Accounts, not on the
+owner address. A scanner with EVM instincts sees literally nothing. Add rent, account
+closures and token-2022 extensions, and "the balance of this wallet" becomes a question
+about a set of accounts, not an address.</li>
+</ul>
+
+<h2>Reproducibility is the actual requirement</h2>
+
+<p>One property separates infrastructure from a script: run the same derivation twice,
+get the same bytes. Same inputs, same anchors, same output.</p>
+
+<p>Getting there means integer base units everywhere, because
+floating point will disagree with itself across runs. It means canonical ordering and
+serialization, because "the same data" in a different key order fails a hash check. It
+means recording the full input set - addresses, descriptors, anchors, even which
+endpoints served the data - and hashing it, so that "we derived this from that" is a
+verifiable claim instead of a sentence in an email.</p>
+
+<p>Why does this matter outside of engineering aesthetics? Because the question at the
+top of this post is usually asked by someone whose job is to <em>not take your word for
+it</em>. EU safeguarding rules now expect crypto-asset service providers to be able to
+demonstrate client asset segregation at any time and without delay. An answer you cannot
+reproduce is an answer you cannot demonstrate. "Our script says so" and "here is the
+derivation, run it yourself" are different products, and only one of them survives an
+audit.</p>
+
+<h2>What good looks like</h2>
+
+<p>If you are building or buying this capability, the checklist is short:</p>
+
+<ol>
+<li>A defined timestamp-to-anchor rule per chain, below the finality threshold, with the
+anchor recorded in the output.</li>
+<li>One consistent as-of point across every chain in the portfolio.</li>
+<li>Derivation that respects each chain's semantics: descriptors and gap limits, logs
+plus traces plus deltas, token accounts - not one mental model stretched across three
+architectures.</li>
+<li>Deterministic output: integers, canonical serialization, an input hash. Re-running
+it is the test.</li>
+<li>Explicit failure when the data source cannot support the question - an RPC that no
+longer serves the needed history should produce an error, not an approximation.</li>
+</ol>
+
+<p>This is the input side of every ledger-vs-chain reconciliation: before you can
+compare the books against the chain, you need the chain's side of the story at a defined
+moment, in a form someone else can verify. I have been building exactly this across
+Bitcoin, EVM and Solana, and it is also part of what I
+<a href="/services/">offer as an engagement</a> - because in most teams this problem is
+discovered the week before an audit, which is the most expensive possible time to
+discover it.</p>
+
+</article>
+
+<footer>
+  <p>Maciej Lewandowski &middot; Senior Blockchain Engineer &middot;
+  <a href="/">maciejlewandowski.dev</a> &middot;
+  <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a> &middot;
+  <a href="https://github.com/NiceLeader">GitHub</a></p>
+</footer>
+
+</div>
+</body>
+</html>

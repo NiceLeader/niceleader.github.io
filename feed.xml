@@ -7,6 +7,13 @@
   <language>en</language>
   <atom:link href="https://maciejlewandowski.dev/feed.xml" rel="self" type="application/rss+xml"/>
   <item>
+    <title>Balance at 14:00 UTC Does Not Exist</title>
+    <link>https://maciejlewandowski.dev/blog/point-in-time-balances/</link>
+    <guid>https://maciejlewandowski.dev/blog/point-in-time-balances/</guid>
+    <pubDate>Tue, 12 Aug 2026 10:00:00 GMT</pubDate>
+    <description>Chains never close, so a point-in-time balance has to be derived, not queried. The anchor problem, the per-chain traps, and why reproducibility is the real requirement.</description>
+  </item>
+  <item>
     <title>Money in Rust: Making Illegal States Unrepresentable</title>
     <link>https://maciejlewandowski.dev/blog/rust-money-types/</link>
     <guid>https://maciejlewandowski.dev/blog/rust-money-types/</guid>
