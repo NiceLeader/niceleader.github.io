@@ -7,7 +7,7 @@
     "test": "node --test",
     "test:coverage": "node --test --experimental-test-coverage",
     "validate:site": "node scripts/validate.mjs",
-    "validate:html": "html-validate \"_site/**/*.html\"",
+    "validate:html": "html-validate \"_site/**/*.html\" \"github-pages-fallback/*.html\"",
     "lighthouse": "node scripts/lighthouse.mjs",
     "audit": "npm audit --audit-level=moderate",
     "check": "npm run test:coverage && npm run build && npm run validate:site && npm run validate:html && npm run audit"

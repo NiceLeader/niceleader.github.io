@@ -19,10 +19,10 @@ test("GitHub Pages fallback contains only a noindex redirect and no post content
     const html = await readFile(path.join(fallbackDir, file), "utf8");
     assert.match(html, /<meta name="robots" content="noindex,nofollow">/);
     assert.match(html, /<link rel="canonical" href="https:\/\/maciejlewandowski\.dev\/">/);
-    assert.match(
-      html,
-      /window\.location\.pathname \+ window\.location\.search \+ window\.location\.hash/,
-    );
+    assert.match(html, /const target = new URL\("https:\/\/maciejlewandowski\.dev"\)/);
+    assert.match(html, /target\.pathname = window\.location\.pathname/);
+    assert.match(html, /target\.search = window\.location\.search/);
+    assert.match(html, /target\.hash = window\.location\.hash/);
     assert.match(html, /window\.location\.replace\(target\.href\)/);
     assert.doesNotMatch(html, /<form|<iframe|https:\/\/static\.cloudflareinsights\.com/i);
 
