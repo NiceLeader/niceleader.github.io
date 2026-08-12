@@ -232,11 +232,15 @@ async function copyFileWhenPresent(rootDir, outputDir, relativePath) {
   await copyFile(sourcePath, destinationPath);
 }
 
-async function copyLegacyRedirects(rootDir, outputDir) {
+async function copyLegacyRedirects(rootDir, outputDir, publishedPosts) {
   const blogDirectory = path.join(rootDir, "blog");
   const entries = await readdir(blogDirectory, { withFileTypes: true });
+  const publishedSlugs = new Set(publishedPosts.map((post) => post.slug));
   const redirectFiles = entries.filter(
-    (entry) => entry.isFile() && entry.name.endsWith(".html") && entry.name !== "index.html",
+    (entry) =>
+      entry.isFile() &&
+      entry.name.endsWith(".html") &&
+      publishedSlugs.has(path.basename(entry.name, ".html")),
   );
 
   for (const redirectFile of redirectFiles) {
@@ -351,7 +355,7 @@ export async function buildSite({ rootDir, outputDir }) {
   if (await pathExists(path.join(rootDir, "assets"))) {
     await copyDirectory(path.join(rootDir, "assets"), path.join(outputDir, "assets"));
   }
-  await copyLegacyRedirects(rootDir, outputDir);
+  await copyLegacyRedirects(rootDir, outputDir, publishedPosts);
   await Promise.all(STATIC_FILES.map((file) => copyFileWhenPresent(rootDir, outputDir, file)));
 
   for (const post of publishedPosts) {
