@@ -42,3 +42,13 @@ test("does not upgrade the local HTTP audit origin", () => {
 
   assert.doesNotMatch(policy, /upgrade-insecure-requests/);
 });
+
+test("allows same-origin requests while keeping external connections allowlisted", () => {
+  const policy = renderSecurityHeaders(["<html><body></body></html>"]);
+
+  assert.match(
+    policy,
+    /connect-src 'self' https:\/\/cloudflareinsights\.com/,
+  );
+  assert.doesNotMatch(policy, /connect-src[^;]*\*/);
+});
