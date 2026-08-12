@@ -1,0 +1,11 @@
+{
+  "name": "maciejlewandowski-dev",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage",
+    "check": "npm run test:coverage && npm run build && node scripts/validate.mjs"
+  }
+}
