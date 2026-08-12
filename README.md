@@ -29,6 +29,10 @@ Post metadata and publication status live in `content/posts.json`:
 
 The generated artifact, not the repository root, is the deployable site.
 
+`.github/workflows/pages.yml` rebuilds and validates the site on `main`, then deploys
+only `_site/` through GitHub Pages. The Pages source must remain set to GitHub Actions;
+the legacy `main:/` source would expose unpublished source directories.
+
 ## Quality gates
 
 `npm run check` runs unit tests with coverage, produces a clean build, validates the
