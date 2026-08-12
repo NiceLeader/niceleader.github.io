@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import test from "node:test";
 
 import {
@@ -24,4 +25,20 @@ test("rejects a header file that is not a single global rule", () => {
     () => parseSecurityHeaders("/blog/*\n  X-Frame-Options: DENY\n"),
     /global \/\* rule/i,
   );
+});
+
+test("hashes inline blocks after HTML line-ending normalization", () => {
+  const policy = renderSecurityHeaders([
+    "<html><head><style>\r\nbody { color: black; }\r\n</style></head></html>",
+  ]);
+  const browserSource = "\nbody { color: black; }\n";
+  const expectedHash = createHash("sha256").update(browserSource).digest("base64");
+
+  assert.ok(policy.includes(`'sha256-${expectedHash}'`));
+});
+
+test("does not upgrade the local HTTP audit origin", () => {
+  const policy = renderSecurityHeaders(["<html><body></body></html>"]);
+
+  assert.doesNotMatch(policy, /upgrade-insecure-requests/);
 });
