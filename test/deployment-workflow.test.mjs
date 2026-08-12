@@ -46,3 +46,16 @@ test("production workflow deploys only the verified artifact to Cloudflare Pages
   assert.equal(workflow.match(/pages:\s*write/g)?.length, 1);
   assert.equal(workflow.match(/id-token:\s*write/g)?.length, 1);
 });
+
+test("pull request checks avoid duplicating the main deployment work", async () => {
+  const workflow = await readFile(
+    path.join(projectRoot, ".github", "workflows", "quality.yml"),
+    "utf8",
+  );
+
+  assert.match(workflow, /on:\s*\n\s+pull_request:\s*\n\s+workflow_dispatch:/);
+  assert.doesNotMatch(workflow, /\n\s+push:/);
+  assert.match(workflow, /npm run check/);
+  assert.doesNotMatch(workflow, /npm run lighthouse/);
+  assert.doesNotMatch(workflow, /actions\/upload-artifact/);
+});
