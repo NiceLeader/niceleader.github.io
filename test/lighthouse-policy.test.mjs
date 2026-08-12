@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
-import {
-  attemptPasses,
-  selectPassingAttempt,
-} from "../scripts/lighthouse-policy.mjs";
+import { attemptPasses } from "../scripts/lighthouse-policy.mjs";
+
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const thresholds = {
   accessibility: 1,
@@ -13,24 +15,26 @@ const thresholds = {
   seo: 1,
 };
 
-test("accepts a stable retry after a transient cold-start failure", () => {
-  const attempts = [
-    { accessibility: 1, "best-practices": 0.96, performance: 0.85, seo: 1 },
-    { accessibility: 1, "best-practices": 0.96, performance: 0.99, seo: 1 },
-  ];
+test("keeps a measured cold-start threshold failure fail-closed", () => {
+  const measuredScores = {
+    accessibility: 1,
+    "best-practices": 0.96,
+    performance: 0.85,
+    seo: 1,
+  };
 
-  assert.equal(attemptPasses(attempts[0], thresholds), false);
-  assert.equal(attemptPasses(attempts[1], thresholds), true);
-  assert.deepEqual(selectPassingAttempt(attempts, thresholds), attempts[1]);
+  assert.equal(attemptPasses(measuredScores, thresholds), false);
 });
 
-test("does not combine category scores from separate failing attempts", () => {
-  const attempts = [
-    { accessibility: 0.99, "best-practices": 0.96, performance: 1, seo: 1 },
-    { accessibility: 1, "best-practices": 0.96, performance: 0.94, seo: 1 },
-  ];
+test("warms Lighthouse before routes and does not retry threshold failures", async () => {
+  const runner = await readFile(
+    path.join(projectRoot, "scripts", "lighthouse.mjs"),
+    "utf8",
+  );
 
-  assert.equal(selectPassingAttempt(attempts, thresholds), null);
+  assert.match(runner, /const warmupResult = await lighthouse/);
+  assert.ok(runner.indexOf("const warmupResult") < runner.indexOf("for (const route of ROUTES)"));
+  assert.doesNotMatch(runner, /MAX_ROUTE_ATTEMPTS|selectPassingAttempt/);
 });
 
 test("requires every configured threshold on the same attempt", () => {
