@@ -25,19 +25,45 @@
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "Person",
-  "name": "Maciej Lewandowski",
-  "jobTitle": "Senior Blockchain Engineer",
-  "url": "https://maciejlewandowski.dev/",
-  "sameAs": [
-    "https://www.linkedin.com/in/maciejlewandowsky/",
-    "https://github.com/NiceLeader"
-  ],
-  "address": { "@type": "PostalAddress", "addressCountry": "PL" },
-  "knowsAbout": [
-    "Digital Asset Custody", "Wallet Infrastructure", "Tokenization",
-    "Solana", "Rust", "EVM", "Bitcoin", "Enterprise DLT",
-    "Java", "Spring Boot", "TypeScript", "NestJS"
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://maciejlewandowski.dev/#website",
+      "url": "https://maciejlewandowski.dev/",
+      "name": "Maciej Lewandowski",
+      "description": "Field notes and consulting for digital asset custody, wallet infrastructure and tokenization.",
+      "inLanguage": "en",
+      "publisher": { "@id": "https://maciejlewandowski.dev/#person" }
+    },
+    {
+      "@type": "ProfilePage",
+      "@id": "https://maciejlewandowski.dev/#profile",
+      "url": "https://maciejlewandowski.dev/",
+      "name": "Maciej Lewandowski - Senior Blockchain Engineer",
+      "description": "Senior blockchain engineer for digital asset custody, wallet infrastructure and tokenization.",
+      "inLanguage": "en",
+      "isPartOf": { "@id": "https://maciejlewandowski.dev/#website" },
+      "mainEntity": { "@id": "https://maciejlewandowski.dev/#person" }
+    },
+    {
+      "@type": "Person",
+      "@id": "https://maciejlewandowski.dev/#person",
+      "name": "Maciej Lewandowski",
+      "jobTitle": "Senior Blockchain Engineer",
+      "description": "Senior blockchain engineer specializing in digital asset custody, wallet infrastructure and tokenization.",
+      "url": "https://maciejlewandowski.dev/",
+      "mainEntityOfPage": { "@id": "https://maciejlewandowski.dev/#profile" },
+      "sameAs": [
+        "https://www.linkedin.com/in/maciejlewandowsky/",
+        "https://github.com/NiceLeader"
+      ],
+      "address": { "@type": "PostalAddress", "addressCountry": "PL" },
+      "knowsAbout": [
+        "Digital Asset Custody", "Wallet Infrastructure", "Tokenization",
+        "Solana", "Rust", "EVM", "Bitcoin", "Enterprise DLT",
+        "Java", "Spring Boot", "TypeScript", "NestJS"
+      ]
+    }
   ]
 }
 </script>
