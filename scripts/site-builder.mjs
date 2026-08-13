@@ -4,6 +4,7 @@ import path from "node:path";
 import { renderSecurityHeaders } from "./security-headers.mjs";
 
 const ALLOWED_POST_STATUSES = new Set(["draft", "scheduled", "published"]);
+const ALLOWED_ARTICLE_TYPES = new Set(["Article", "BlogPosting", "TechArticle"]);
 const HOME_POSTS_START = "<!-- HOME_POSTS_START -->";
 const HOME_POSTS_END = "<!-- HOME_POSTS_END -->";
 const BLOG_POSTS_START = "<!-- BLOG_POSTS_START -->";
@@ -84,7 +85,7 @@ function getSiteRootUrl(siteUrl) {
   return `${siteUrl.replace(/\/+$/, "")}/`;
 }
 
-function replaceArticleStructuredData(source, manifest, post) {
+function readArticleStructuredData(source, post) {
   const scriptPattern = /<script\s+type=["']application\/ld\+json["']>([\s\S]*?)<\/script>/gi;
   const matches = [...source.matchAll(scriptPattern)];
   if (matches.length !== 1) {
@@ -98,7 +99,7 @@ function replaceArticleStructuredData(source, manifest, post) {
     throw new Error(`Published post ${post.slug} contains invalid JSON-LD`, { cause: error });
   }
 
-  if (!new Set(["Article", "BlogPosting", "TechArticle"]).has(sourceData["@type"])) {
+  if (!ALLOWED_ARTICLE_TYPES.has(sourceData["@type"])) {
     throw new Error(`Published post ${post.slug} must use Article structured data`);
   }
   if (!sourceData.author || typeof sourceData.author !== "object") {
@@ -107,11 +108,12 @@ function replaceArticleStructuredData(source, manifest, post) {
   assertNonEmptyString(sourceData.author.name, `post ${post.slug} author.name`);
   assertNonEmptyString(sourceData.author.url, `post ${post.slug} author.url`);
 
-  const siteRootUrl = getSiteRootUrl(manifest.site.url);
-  const postUrl = `${siteRootUrl}blog/${post.slug}/`;
-  const personId = `${siteRootUrl}#person`;
-  const articleEntity = {
-    "@type": sourceData["@type"],
+  return { matchedScript: matches[0][0], sourceData };
+}
+
+function createArticleEntity({ articleType, manifest, personId, post, postUrl, siteRootUrl }) {
+  return {
+    "@type": articleType,
     "@id": `${postUrl}#article`,
     url: postUrl,
     headline: post.title,
@@ -124,39 +126,62 @@ function replaceArticleStructuredData(source, manifest, post) {
     mainEntityOfPage: { "@id": postUrl },
     isPartOf: { "@id": `${siteRootUrl}#website` },
   };
-  const structuredData = {
+}
+
+function createBreadcrumbEntity(post, postUrl, siteRootUrl) {
+  return {
+    "@type": "BreadcrumbList",
+    "@id": `${postUrl}#breadcrumb`,
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Writing",
+        item: `${siteRootUrl}blog/`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: post.title,
+        item: postUrl,
+      },
+    ],
+  };
+}
+
+function createArticleStructuredData(manifest, post, sourceData) {
+  const siteRootUrl = getSiteRootUrl(manifest.site.url);
+  const postUrl = `${siteRootUrl}blog/${post.slug}/`;
+  const personId = `${siteRootUrl}#person`;
+
+  return {
     "@context": "https://schema.org",
     "@graph": [
-      articleEntity,
+      createArticleEntity({
+        articleType: sourceData["@type"],
+        manifest,
+        personId,
+        post,
+        postUrl,
+        siteRootUrl,
+      }),
       {
         "@type": "Person",
         "@id": personId,
         name: sourceData.author.name,
         url: sourceData.author.url,
       },
-      {
-        "@type": "BreadcrumbList",
-        "@id": `${postUrl}#breadcrumb`,
-        itemListElement: [
-          {
-            "@type": "ListItem",
-            position: 1,
-            name: "Writing",
-            item: `${siteRootUrl}blog/`,
-          },
-          {
-            "@type": "ListItem",
-            position: 2,
-            name: post.title,
-            item: postUrl,
-          },
-        ],
-      },
+      createBreadcrumbEntity(post, postUrl, siteRootUrl),
     ],
   };
+}
+
+function replaceArticleStructuredData(source, manifest, post) {
+  const { matchedScript, sourceData } = readArticleStructuredData(source, post);
+  const structuredData = createArticleStructuredData(manifest, post, sourceData);
   const replacement = `<script type="application/ld+json">\n${serializeJsonForHtml(structuredData)}\n</script>`;
 
-  return source.replace(matches[0][0], replacement);
+  return source.replace(matchedScript, replacement);
 }
 
 function renderRelatedPosts(post, publishedPostsBySlug) {
