@@ -83,9 +83,25 @@ async function createFixture() {
   );
 
   for (const post of manifest.posts) {
+    const postUrl = `https://example.com/blog/${post.slug}/`;
+    const structuredData = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      author: {
+        "@type": "Person",
+        name: "Example Author",
+        url: "https://example.com/",
+      },
+      datePublished: post.date,
+      headline: post.title,
+      mainEntityOfPage: postUrl,
+      publisher: { "@type": "Person", name: "Example Author" },
+    });
     await writeText(
       path.join(rootDir, "blog", post.slug, "index.html"),
-      `<html><head><title>${post.title}</title></head><body>${post.title}</body></html>`,
+      `<html><head><title>${post.title}</title>` +
+        `<script type="application/ld+json">${structuredData}</script></head>` +
+        `<body><article>${post.title}</article></body></html>`,
     );
     await writeText(
       path.join(rootDir, "blog", `${post.slug}.html`),
@@ -94,6 +110,16 @@ async function createFixture() {
   }
 
   return { inlineScript, inlineStyle, manifest, outputDir, rootDir, styleAttribute };
+}
+
+function readJsonLd(source) {
+  const matches = [
+    ...source.matchAll(
+      /<script\s+type=["']application\/ld\+json["']>([\s\S]*?)<\/script>/gi,
+    ),
+  ];
+  assert.equal(matches.length, 1, "page must contain one JSON-LD graph");
+  return JSON.parse(matches[0][1]);
 }
 
 async function listFiles(directoryPath, basePath = directoryPath) {
@@ -188,6 +214,71 @@ test("build generates strict security headers for every inline source", async ()
   assert.match(headers, /Permissions-Policy:/);
 });
 
+test("build connects article metadata and related notes to published content", async () => {
+  const { manifest, outputDir, rootDir } = await createFixture();
+  const publishedPost = manifest.posts.find((post) => post.slug === "published-post");
+  const relatedPost = manifest.posts.find((post) => post.slug === "draft-post");
+  publishedPost.modified = "2026-08-12";
+  publishedPost.related = [relatedPost.slug];
+  relatedPost.status = "published";
+  relatedPost.related = [publishedPost.slug];
+  await writeText(
+    path.join(rootDir, "content", "posts.json"),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+  );
+
+  await buildSite({ rootDir, outputDir });
+
+  const article = await readFile(
+    path.join(outputDir, "blog", publishedPost.slug, "index.html"),
+    "utf8",
+  );
+  const structuredData = readJsonLd(article);
+  const entitiesById = new Map(
+    structuredData["@graph"].map((entity) => [entity["@id"], entity]),
+  );
+  const articleUrl = `https://example.com/blog/${publishedPost.slug}/`;
+  const personId = "https://example.com/#person";
+  const articleEntity = entitiesById.get(`${articleUrl}#article`);
+  const breadcrumb = entitiesById.get(`${articleUrl}#breadcrumb`);
+
+  assert.deepEqual(articleEntity.author, { "@id": personId });
+  assert.deepEqual(articleEntity.publisher, { "@id": personId });
+  assert.deepEqual(articleEntity.mainEntityOfPage, { "@id": articleUrl });
+  assert.equal(articleEntity.dateModified, publishedPost.modified);
+  assert.deepEqual(
+    breadcrumb.itemListElement.map(({ item, name, position }) => ({ item, name, position })),
+    [
+      { item: "https://example.com/blog/", name: "Writing", position: 1 },
+      { item: articleUrl, name: publishedPost.title, position: 2 },
+    ],
+  );
+  assert.match(article, /<h2[^>]*>Related field notes<\/h2>/);
+  assert.match(article, /href="\/blog\/draft-post\/"/);
+  assert.match(article, /Draft post/);
+  assert.doesNotMatch(article, /href="\/blog\/scheduled-post\/"/);
+});
+
+test("build keeps manifest text from terminating the JSON-LD script", async () => {
+  const { manifest, outputDir, rootDir } = await createFixture();
+  const publishedPost = manifest.posts.find((post) => post.slug === "published-post");
+  publishedPost.title = "Safe title </script><script>alert(1)</script>";
+  await writeText(
+    path.join(rootDir, "content", "posts.json"),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+  );
+
+  await buildSite({ rootDir, outputDir });
+
+  const article = await readFile(
+    path.join(outputDir, "blog", publishedPost.slug, "index.html"),
+    "utf8",
+  );
+  assert.doesNotMatch(article, /<script>alert\(1\)<\/script>/);
+  assert.match(article, /\\u003c\/script\\u003e\\u003cscript\\u003ealert\(1\)/);
+  assert.equal(readJsonLd(article)["@graph"][0].headline, publishedPost.title);
+});
+
 test("manifest validation rejects duplicate slugs", () => {
   const duplicatePost = {
     slug: "duplicate",
@@ -236,6 +327,23 @@ test("manifest validation rejects impossible calendar dates", () => {
       }),
     /YYYY-MM-DD/,
   );
+});
+
+test("manifest validation rejects unsafe related-post relationships", async () => {
+  const { manifest } = await createFixture();
+  const publishedPost = manifest.posts.find((post) => post.slug === "published-post");
+
+  publishedPost.related = [publishedPost.slug];
+  assert.throws(() => validateManifest(manifest), /cannot reference itself/i);
+
+  publishedPost.related = ["missing-post"];
+  assert.throws(() => validateManifest(manifest), /unknown post/i);
+
+  publishedPost.related = ["draft-post"];
+  assert.throws(() => validateManifest(manifest), /must reference a published post/i);
+
+  publishedPost.related = ["draft-post", "draft-post"];
+  assert.throws(() => validateManifest(manifest), /duplicate related post/i);
 });
 
 test("build fails closed when a published source file is missing", async () => {

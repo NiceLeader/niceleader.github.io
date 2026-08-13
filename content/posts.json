@@ -13,7 +13,7 @@
       "AI-assisted engineering"
     ],
     "pageDates": {
-      "home": "2026-08-02",
+      "home": "2026-08-13",
       "services": "2026-08-02"
     }
   },
@@ -23,48 +23,78 @@
       "title": "Money in Rust: Making Illegal States Unrepresentable",
       "description": "Newtypes, phantom-typed currencies, checked arithmetic and typestate - how much of a financial bug class the compiler can take off your hands, for zero bytes.",
       "date": "2026-07-25",
+      "modified": "2026-08-13",
       "track": "Engineering notes",
-      "status": "published"
+      "status": "published",
+      "related": [
+        "backtest-lies",
+        "transaction-state-machines"
+      ]
     },
     {
       "slug": "backtest-lies",
       "title": "Your Backtest Is Lying to You",
       "description": "Look-ahead bias, survivorship, point-in-time data and overfitting - why a backtest is a replay engine, and what that demands of it.",
       "date": "2026-07-25",
+      "modified": "2026-08-13",
       "track": "Engineering notes",
-      "status": "published"
+      "status": "published",
+      "related": [
+        "point-in-time-balances",
+        "rust-money-types"
+      ]
     },
     {
       "slug": "deposit-detection",
       "title": "Why Your Deposit Detection Misses Money",
       "description": "Proxy contracts, fee-on-transfer tokens, reorgs, UTXO edge cases and Solana token accounts - and why continuous reconciliation is the only real fix.",
       "date": "2026-07-22",
+      "modified": "2026-08-13",
       "track": "Custody engineering",
-      "status": "published"
+      "status": "published",
+      "related": [
+        "point-in-time-balances",
+        "transaction-state-machines"
+      ]
     },
     {
       "slug": "transaction-state-machines",
       "title": "Transaction State Machines for Multi-Chain Custody",
       "description": "Broadcast is not done, confirmed is not final, and retries are where money gets lost. What breaks, chain by chain.",
       "date": "2026-07-22",
+      "modified": "2026-08-13",
       "track": "Custody engineering",
-      "status": "published"
+      "status": "published",
+      "related": [
+        "stuck-transactions",
+        "deposit-detection"
+      ]
     },
     {
       "slug": "utxo-coin-selection",
       "title": "UTXO Coin Selection in Production",
       "description": "Your Bitcoin balance is not a number, it is a set. Fees, dust, privacy and the concurrency problem the tutorials skip.",
       "date": "2026-07-22",
+      "modified": "2026-08-13",
       "track": "Custody engineering",
-      "status": "published"
+      "status": "published",
+      "related": [
+        "stuck-transactions",
+        "point-in-time-balances"
+      ]
     },
     {
       "slug": "stuck-transactions",
       "title": "Stuck Transactions at Scale",
       "description": "RBF, CPFP, nonce queues, expiring blockhashes and the pinning problem - a remediation playbook for transactions that will not confirm.",
       "date": "2026-07-22",
+      "modified": "2026-08-13",
       "track": "Custody engineering",
-      "status": "published"
+      "status": "published",
+      "related": [
+        "transaction-state-machines",
+        "utxo-coin-selection"
+      ]
     },
     {
       "slug": "agents-regulated-code",
@@ -111,8 +141,13 @@
       "title": "Balance at 14:00 UTC Does Not Exist",
       "description": "Chains never close, so a point-in-time balance has to be derived, not queried. The anchor problem, the per-chain traps, and why reproducibility is the real requirement.",
       "date": "2026-08-12",
+      "modified": "2026-08-13",
       "track": "Custody engineering",
-      "status": "published"
+      "status": "published",
+      "related": [
+        "deposit-detection",
+        "transaction-state-machines"
+      ]
     },
     {
       "slug": "sighash-policy",

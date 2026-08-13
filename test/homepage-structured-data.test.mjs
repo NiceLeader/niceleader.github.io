@@ -22,6 +22,11 @@ async function readHomepageStructuredData() {
   return JSON.parse(matches[0][1]);
 }
 
+async function readContentManifest() {
+  const source = await readFile(path.join(projectRoot, "content", "posts.json"), "utf8");
+  return JSON.parse(source);
+}
+
 test("homepage connects the website and profile page to Maciej Lewandowski", async () => {
   const structuredData = await readHomepageStructuredData();
 
@@ -80,4 +85,19 @@ test("homepage connects the website and profile page to Maciej Lewandowski", asy
       url: siteUrl,
     },
   );
+});
+
+test("content metadata covers the homepage identity update and curates published links", async () => {
+  const manifest = await readContentManifest();
+  const publishedPosts = manifest.posts.filter((post) => post.status === "published");
+
+  assert.ok(
+    manifest.site.pageDates.home >= "2026-08-13",
+    "home lastmod must include the significant identity graph update",
+  );
+  for (const post of publishedPosts) {
+    assert.ok(Array.isArray(post.related), `${post.slug} must define related posts`);
+    assert.ok(post.related.length >= 1, `${post.slug} must link to related content`);
+    assert.ok(post.related.length <= 3, `${post.slug} must keep related content focused`);
+  }
 });
