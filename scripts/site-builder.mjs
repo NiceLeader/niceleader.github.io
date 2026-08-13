@@ -50,6 +50,15 @@ function escapeXml(value) {
   return escapeHtml(value);
 }
 
+function serializeJsonForHtml(value) {
+  return JSON.stringify(value, null, 2)
+    .replaceAll("&", "\\u0026")
+    .replaceAll("<", "\\u003c")
+    .replaceAll(">", "\\u003e")
+    .replaceAll("\u2028", "\\u2028")
+    .replaceAll("\u2029", "\\u2029");
+}
+
 function formatMonthYear(date) {
   return new Intl.DateTimeFormat("en", {
     month: "short",
@@ -69,6 +78,129 @@ function replaceGeneratedBlock(source, startMarker, endMarker, generatedContent)
   const before = source.slice(0, startIndex + startMarker.length);
   const after = source.slice(endIndex);
   return `${before}\n${generatedContent}\n${after}`;
+}
+
+function getSiteRootUrl(siteUrl) {
+  return `${siteUrl.replace(/\/+$/, "")}/`;
+}
+
+function replaceArticleStructuredData(source, manifest, post) {
+  const scriptPattern = /<script\s+type=["']application\/ld\+json["']>([\s\S]*?)<\/script>/gi;
+  const matches = [...source.matchAll(scriptPattern)];
+  if (matches.length !== 1) {
+    throw new Error(`Published post ${post.slug} must contain exactly one JSON-LD script`);
+  }
+
+  let sourceData;
+  try {
+    sourceData = JSON.parse(matches[0][1]);
+  } catch (error) {
+    throw new Error(`Published post ${post.slug} contains invalid JSON-LD`, { cause: error });
+  }
+
+  if (!new Set(["Article", "BlogPosting", "TechArticle"]).has(sourceData["@type"])) {
+    throw new Error(`Published post ${post.slug} must use Article structured data`);
+  }
+  if (!sourceData.author || typeof sourceData.author !== "object") {
+    throw new Error(`Published post ${post.slug} must define its author`);
+  }
+  assertNonEmptyString(sourceData.author.name, `post ${post.slug} author.name`);
+  assertNonEmptyString(sourceData.author.url, `post ${post.slug} author.url`);
+
+  const siteRootUrl = getSiteRootUrl(manifest.site.url);
+  const postUrl = `${siteRootUrl}blog/${post.slug}/`;
+  const personId = `${siteRootUrl}#person`;
+  const articleEntity = {
+    "@type": sourceData["@type"],
+    "@id": `${postUrl}#article`,
+    url: postUrl,
+    headline: post.title,
+    description: post.description,
+    datePublished: post.date,
+    ...(post.modified ? { dateModified: post.modified } : {}),
+    inLanguage: manifest.site.language,
+    author: { "@id": personId },
+    publisher: { "@id": personId },
+    mainEntityOfPage: { "@id": postUrl },
+    isPartOf: { "@id": `${siteRootUrl}#website` },
+  };
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      articleEntity,
+      {
+        "@type": "Person",
+        "@id": personId,
+        name: sourceData.author.name,
+        url: sourceData.author.url,
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${postUrl}#breadcrumb`,
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Writing",
+            item: `${siteRootUrl}blog/`,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: post.title,
+            item: postUrl,
+          },
+        ],
+      },
+    ],
+  };
+  const replacement = `<script type="application/ld+json">\n${serializeJsonForHtml(structuredData)}\n</script>`;
+
+  return source.replace(matches[0][0], replacement);
+}
+
+function renderRelatedPosts(post, publishedPostsBySlug) {
+  if (!post.related || post.related.length === 0) {
+    return "";
+  }
+
+  const items = post.related
+    .map((slug) => publishedPostsBySlug.get(slug))
+    .map(
+      (relatedPost) =>
+        `  <li><a href="/blog/${escapeHtml(relatedPost.slug)}/">${escapeHtml(relatedPost.title)}</a>` +
+        ` — ${escapeHtml(relatedPost.description)}</li>`,
+    )
+    .join("\n");
+
+  return `<section class="related-notes" aria-labelledby="related-notes-heading">
+<h2 id="related-notes-heading">Related field notes</h2>
+<ul>
+${items}
+</ul>
+</section>`;
+}
+
+function insertBeforeClosingArticle(source, generatedContent, post) {
+  if (generatedContent === "") {
+    return source;
+  }
+
+  const closingTags = [...source.matchAll(/<\/article>/gi)];
+  if (closingTags.length !== 1) {
+    throw new Error(`Published post ${post.slug} must contain exactly one closing article tag`);
+  }
+
+  return source.replace(closingTags[0][0], `${generatedContent}\n\n${closingTags[0][0]}`);
+}
+
+function renderPublishedPost(source, manifest, post, publishedPostsBySlug) {
+  const withStructuredData = replaceArticleStructuredData(source, manifest, post);
+  return insertBeforeClosingArticle(
+    withStructuredData,
+    renderRelatedPosts(post, publishedPostsBySlug),
+    post,
+  );
 }
 
 function getPublishedPosts(manifest) {
@@ -320,6 +452,40 @@ export function validateManifest(manifest) {
     if (!ALLOWED_POST_STATUSES.has(post.status)) {
       throw new Error(`Invalid post status for ${post.slug}: ${post.status}`);
     }
+    if (post.related !== undefined) {
+      if (!Array.isArray(post.related)) {
+        throw new Error(`posts[${index}].related must be an array`);
+      }
+      if (post.related.length > 3) {
+        throw new Error(`Post ${post.slug} cannot define more than 3 related posts`);
+      }
+      const seenRelatedSlugs = new Set();
+      for (const [relatedIndex, relatedSlug] of post.related.entries()) {
+        assertNonEmptyString(relatedSlug, `posts[${index}].related[${relatedIndex}]`);
+        if (relatedSlug === post.slug) {
+          throw new Error(`Post ${post.slug} cannot reference itself as related content`);
+        }
+        if (seenRelatedSlugs.has(relatedSlug)) {
+          throw new Error(`Duplicate related post for ${post.slug}: ${relatedSlug}`);
+        }
+        seenRelatedSlugs.add(relatedSlug);
+      }
+    }
+  }
+
+  const postsBySlug = new Map(posts.map((post) => [post.slug, post]));
+  for (const post of posts) {
+    for (const relatedSlug of post.related ?? []) {
+      const relatedPost = postsBySlug.get(relatedSlug);
+      if (!relatedPost) {
+        throw new Error(`Post ${post.slug} references unknown post: ${relatedSlug}`);
+      }
+      if (post.status === "published" && relatedPost.status !== "published") {
+        throw new Error(
+          `Published post ${post.slug} related link must reference a published post: ${relatedSlug}`,
+        );
+      }
+    }
   }
 
   return manifest;
@@ -335,6 +501,7 @@ export async function buildSite({ rootDir, outputDir }) {
   assertSafeOutputDirectory(rootDir, outputDir);
   const manifest = await loadManifest(rootDir);
   const publishedPosts = getPublishedPosts(manifest);
+  const publishedPostsBySlug = new Map(publishedPosts.map((post) => [post.slug, post]));
 
   for (const post of publishedPosts) {
     const sourcePath = path.join(rootDir, "blog", post.slug, "index.html");
@@ -376,9 +543,14 @@ export async function buildSite({ rootDir, outputDir }) {
   await Promise.all(STATIC_FILES.map((file) => copyFileWhenPresent(rootDir, outputDir, file)));
 
   for (const post of publishedPosts) {
-    await copyDirectory(
-      path.join(rootDir, "blog", post.slug),
-      path.join(outputDir, "blog", post.slug),
+    const sourceDirectory = path.join(rootDir, "blog", post.slug);
+    const destinationDirectory = path.join(outputDir, "blog", post.slug);
+    await copyDirectory(sourceDirectory, destinationDirectory);
+    const source = await readFile(path.join(sourceDirectory, "index.html"), "utf8");
+    await writeFile(
+      path.join(destinationDirectory, "index.html"),
+      renderPublishedPost(source.replace(/^\uFEFF/, ""), manifest, post, publishedPostsBySlug),
+      "utf8",
     );
   }
 

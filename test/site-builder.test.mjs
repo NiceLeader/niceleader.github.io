@@ -259,6 +259,26 @@ test("build connects article metadata and related notes to published content", a
   assert.doesNotMatch(article, /href="\/blog\/scheduled-post\/"/);
 });
 
+test("build keeps manifest text from terminating the JSON-LD script", async () => {
+  const { manifest, outputDir, rootDir } = await createFixture();
+  const publishedPost = manifest.posts.find((post) => post.slug === "published-post");
+  publishedPost.title = "Safe title </script><script>alert(1)</script>";
+  await writeText(
+    path.join(rootDir, "content", "posts.json"),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+  );
+
+  await buildSite({ rootDir, outputDir });
+
+  const article = await readFile(
+    path.join(outputDir, "blog", publishedPost.slug, "index.html"),
+    "utf8",
+  );
+  assert.doesNotMatch(article, /<script>alert\(1\)<\/script>/);
+  assert.match(article, /\\u003c\/script\\u003e\\u003cscript\\u003ealert\(1\)/);
+  assert.equal(readJsonLd(article)["@graph"][0].headline, publishedPost.title);
+});
+
 test("manifest validation rejects duplicate slugs", () => {
   const duplicatePost = {
     slug: "duplicate",
