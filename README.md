@@ -47,13 +47,12 @@ Cloudflare Pages through the official Wrangler action. It requires the
 and the token is limited to Cloudflare Pages edit access for the production
 account. The deploy job also rejects a manual run from any non-`main` ref.
 
-GitHub Pages is not a production target and must not own the custom domain. GitHub
-does not allow Pages to be disabled for a user-site repository named
-`NiceLeader.github.io`, so the workflow publishes only the minimal, `noindex`
-redirect in `github-pages-fallback/` there. It never publishes the repository root
-or the full site to that fallback. The `github-pages` environment accepts only
-`main`, and its `pages: write` and `id-token: write` permissions exist only on the
-isolated fallback job.
+GitHub Pages is not a deployment target and does not own the custom domain. The
+workflow does not upload a Pages artifact, call a GitHub Pages deployment action,
+or request `pages: write` / `id-token: write`. GitHub does not allow Pages to be
+deactivated for a user-site repository named `NiceLeader.github.io`, so its last
+minimal `noindex` redirect may remain available, but this repository performs no
+future GitHub Pages deployments. The `www` redirect is handled by Cloudflare.
 
 A provider-specific root `CNAME` file is intentionally absent from both the
 repository and the generated Cloudflare artifact. The legacy GitHub Pages `main:/`

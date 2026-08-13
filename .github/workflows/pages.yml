@@ -40,11 +40,6 @@ jobs:
       - name: Run Lighthouse quality gates
         run: npm run lighthouse
 
-      - name: Upload safe GitHub Pages fallback
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: github-pages-fallback
-
       - name: Deploy verified site to Cloudflare Pages
         id: deployment
         uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
@@ -53,20 +48,3 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: "4.122.0"
           command: pages deploy _site --project-name=maciejlewandowski-dev --branch=main --commit-hash=${{ github.sha }}
-
-  publish-github-pages-fallback:
-    if: ${{ github.ref == 'refs/heads/main' }}
-    needs: deploy
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-
-    steps:
-      - name: Deploy safe fallback to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
