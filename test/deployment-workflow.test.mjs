@@ -30,21 +30,13 @@ test("production workflow deploys only the verified artifact to Cloudflare Pages
     workflow,
     /command: pages deploy _site --project-name=maciejlewandowski-dev --branch=main --commit-hash=\$\{\{ github\.sha \}\}/,
   );
-  assert.match(
-    workflow,
-    /actions\/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9/,
-  );
-  assert.match(workflow, /path: github-pages-fallback/);
-  assert.match(
-    workflow,
-    /publish-github-pages-fallback:\s*\n\s+if: \$\{\{ github\.ref == 'refs\/heads\/main' \}\}\s*\n\s+needs: deploy[\s\S]*?permissions:\s*\n\s+pages: write\s*\n\s+id-token: write[\s\S]*?environment:\s*\n\s+name: github-pages/,
-  );
-  assert.match(
-    workflow,
-    /actions\/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128/,
-  );
-  assert.equal(workflow.match(/pages:\s*write/g)?.length, 1);
-  assert.equal(workflow.match(/id-token:\s*write/g)?.length, 1);
+  assert.doesNotMatch(workflow, /actions\/upload-pages-artifact@/);
+  assert.doesNotMatch(workflow, /actions\/deploy-pages@/);
+  assert.doesNotMatch(workflow, /github-pages-fallback/);
+  assert.doesNotMatch(workflow, /publish-github-pages/);
+  assert.doesNotMatch(workflow, /pages:\s*write/);
+  assert.doesNotMatch(workflow, /id-token:\s*write/);
+  assert.doesNotMatch(workflow, /name:\s*github-pages/);
 });
 
 test("pull request checks avoid duplicating the main deployment work", async () => {
