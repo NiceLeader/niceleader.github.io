@@ -191,6 +191,52 @@ their place. You need historical constituent lists with the dates they changed, 
 universe that includes the dead. If the strategy only works on survivors, you have
 measured survival rather than skill.</p>
 
+<div class="diagram"><svg viewBox="0 0 760 182" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Survivorship bias. The universe as it stood in 2015 contained companies that were later delisted, acquired or went bankrupt. The membership list you can download today contains only the survivors, so a backtest run on it measures a group selected for having succeeded.">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/>
+    </marker>
+  </defs>
+  <text x="8" y="22" text-anchor="start" style="fill:var(--fg2)">the universe as it was in 2015</text>
+  <rect x="8" y="34" width="300" height="120" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <rect x="28" y="56" width="52" height="36" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="54" y="79" text-anchor="middle" style="fill:var(--fg)">ok</text>
+  <rect x="96" y="56" width="52" height="36" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="122" y="79" text-anchor="middle" style="fill:var(--fg)">ok</text>
+  <rect x="164" y="56" width="52" height="36" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="5 4"/>
+  <text x="190" y="79" text-anchor="middle" style="fill:var(--fg2)">x</text>
+  <rect x="232" y="56" width="52" height="36" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="258" y="79" text-anchor="middle" style="fill:var(--fg)">ok</text>
+  <rect x="28" y="108" width="52" height="36" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="54" y="131" text-anchor="middle" style="fill:var(--fg)">ok</text>
+  <rect x="96" y="108" width="52" height="36" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="5 4"/>
+  <text x="122" y="131" text-anchor="middle" style="fill:var(--fg2)">x</text>
+  <rect x="164" y="108" width="52" height="36" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="190" y="131" text-anchor="middle" style="fill:var(--fg)">ok</text>
+  <rect x="232" y="108" width="52" height="36" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="5 4"/>
+  <text x="258" y="131" text-anchor="middle" style="fill:var(--fg2)">x</text>
+  <text x="158" y="168" text-anchor="middle" style="fill:var(--fg2)">three of these stopped existing</text>
+  <line x1="310" y1="94" x2="448" y2="94" style="stroke:var(--fg2)" marker-end="url(#a1)"/>
+  <text x="379" y="82" text-anchor="middle" style="fill:var(--fg2)">the file you can</text>
+  <text x="379" y="112" text-anchor="middle" style="fill:var(--fg2)">actually download</text>
+  <text x="452" y="22" text-anchor="start" style="fill:var(--fg2)">today's index membership</text>
+  <rect x="452" y="34" width="300" height="120" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="5 4"/>
+  <rect x="472" y="56" width="52" height="36" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="498" y="79" text-anchor="middle" style="fill:var(--fg)">ok</text>
+  <rect x="540" y="56" width="52" height="36" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="566" y="79" text-anchor="middle" style="fill:var(--fg)">ok</text>
+  <rect x="608" y="56" width="52" height="36" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="634" y="79" text-anchor="middle" style="fill:var(--fg)">ok</text>
+  <rect x="676" y="56" width="52" height="36" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="702" y="79" text-anchor="middle" style="fill:var(--fg)">ok</text>
+  <rect x="472" y="108" width="52" height="36" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="498" y="131" text-anchor="middle" style="fill:var(--fg)">ok</text>
+  <text x="602" y="168" text-anchor="middle" style="fill:var(--fg2)">survivors only: the losers left no row</text>
+</svg></div>
+
 <h2>The point-in-time problem, generally</h2>
 
 <p>Survivorship and look-ahead share a root cause: the historical record you query is

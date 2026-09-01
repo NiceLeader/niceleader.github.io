@@ -253,6 +253,32 @@ with a bad sensor, not a good one. That still beats no controller, on one condit
 not chase every wobble. A high-gain controller reading a noisy sensor oscillates. Deloads and
 long averaging windows are the low-pass filter that keeps the loop stable.</p>
 
+<div class="diagram"><svg viewBox="0 0 760 194" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Autoregulation as a control loop. A planned load produces a session, the session produces a measured response such as perceived effort, bar speed and sleep, and that measurement adjusts the next planned load. An open loop skips the measurement and follows the plan regardless.">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/>
+    </marker>
+  </defs>
+  <rect x="8" y="56" width="156" height="48" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="86" y="86" text-anchor="middle" style="fill:var(--fg)">planned load</text>
+  <line x1="164" y1="80" x2="210" y2="80" style="stroke:var(--fg2)" marker-end="url(#a1)"/>
+  <rect x="212" y="56" width="156" height="48" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="290" y="86" text-anchor="middle" style="fill:var(--fg)">the session</text>
+  <line x1="368" y1="80" x2="414" y2="80" style="stroke:var(--fg2)" marker-end="url(#a1)"/>
+  <rect x="416" y="56" width="176" height="48" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="504" y="80" text-anchor="middle" style="fill:var(--fg)">measured response</text>
+  <text x="504" y="96" text-anchor="middle" style="fill:var(--fg2)">RPE, bar speed, sleep</text>
+  <line x1="592" y1="80" x2="638" y2="80" style="stroke:var(--accent)" marker-end="url(#a2)"/>
+  <rect x="640" y="56" width="112" height="48" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="696" y="86" text-anchor="middle" style="fill:var(--fg)">adjust</text>
+  <path d="M 696 104 C 696 138, 86 138, 86 106" fill="none" style="stroke:var(--accent)" stroke-dasharray="5 4" marker-end="url(#a2)"/>
+  <text x="391" y="164" text-anchor="middle" style="fill:var(--fg2)">autoregulation: the plan reads the signal</text>
+  <text x="391" y="182" text-anchor="middle" style="fill:var(--fg2)">an open loop skips the middle box and calls the result discipline</text>
+</svg></div>
+
 <h2>Progressive overload is constrained optimization</h2>
 
 <p>The objective is adaptation. The constraint is a recovery budget that is itself a function of

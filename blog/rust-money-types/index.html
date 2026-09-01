@@ -261,6 +261,32 @@ have met in the wild. You can still invert a rate, but you must say
 <code>invert()</code> out loud, and the result is a different type, which means the
 reviewer sees the decision instead of guessing at it.</p>
 
+<div class="diagram"><svg viewBox="0 0 760 172" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="A conversion carries its direction in the type: Rate of Usd to Eur turns Money in dollars into Money in euros. Going back is not one divided by the rate, it needs the opposite rate type. Rounding stays a domain decision the type system cannot make for you.">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/>
+    </marker>
+  </defs>
+  <rect x="8" y="52" width="170" height="48" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="93" y="82" text-anchor="middle" style="fill:var(--fg)">Money&lt;Usd&gt;</text>
+  <line x1="178" y1="76" x2="286" y2="76" style="stroke:var(--fg2)" marker-end="url(#a1)"/>
+  <text x="232" y="64" text-anchor="middle" style="fill:var(--fg2)">Rate&lt;Usd, Eur&gt;</text>
+  <rect x="288" y="52" width="170" height="48" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="373" y="82" text-anchor="middle" style="fill:var(--fg)">Money&lt;Eur&gt;</text>
+  <line x1="288" y1="122" x2="180" y2="122" style="stroke:var(--fg2)" stroke-dasharray="5 4" marker-end="url(#a1)"/>
+  <text x="234" y="142" text-anchor="middle" style="fill:var(--fg2)">the way back is a different type,</text>
+  <text x="234" y="158" text-anchor="middle" style="fill:var(--fg2)">not one divided by the rate</text>
+  <rect x="492" y="40" width="260" height="118" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="622" y="64" text-anchor="middle" style="fill:var(--fg)">rounding</text>
+  <text x="622" y="86" text-anchor="middle" style="fill:var(--fg2)">half-up, banker's, toward zero</text>
+  <text x="622" y="106" text-anchor="middle" style="fill:var(--fg2)">each is correct somewhere</text>
+  <text x="622" y="126" text-anchor="middle" style="fill:var(--fg2)">the type cannot pick for you</text>
+  <text x="622" y="146" text-anchor="middle" style="fill:var(--fg2)">so the call site must</text>
+</svg></div>
+
 <h2>5. Checked arithmetic, because release builds wrap</h2>
 
 <p>Rust panics on integer overflow in debug builds. In release builds, by default, it

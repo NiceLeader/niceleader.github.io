@@ -157,6 +157,37 @@ not having confirmed whether the amendment touched it.</p>
 type the source: the scoring engine is high risk either way, and the agent that wrote it is
 not high risk by association.</p>
 
+<div class="diagram"><svg viewBox="0 0 760 188" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Two tracks. DORA and its delegated regulation have applied since January 2025 and already bind the diff. On the AI Act track, 2 August 2026 brought Article 50 and Article 101, the marking transition ends 2 December 2026, standalone high-risk obligations under Annex III moved to 2 December 2027 from 2 August 2026, and embedded AI under Annex I follows in August 2028.">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/>
+    </marker>
+  </defs>
+  <text x="8" y="22" text-anchor="start" style="fill:var(--fg2)">binds the diff today</text>
+  <rect x="8" y="34" width="216" height="74" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="116" y="58" text-anchor="middle" style="fill:var(--fg)">DORA</text>
+  <text x="116" y="78" text-anchor="middle" style="fill:var(--fg2)">since 17 Jan 2025</text>
+  <text x="116" y="96" text-anchor="middle" style="fill:var(--fg2)">CDR (EU) 2024/1774</text>
+  <text x="262" y="22" text-anchor="start" style="fill:var(--fg2)">AI Act, after the July 2026 Omnibus</text>
+  <line x1="262" y1="100" x2="748" y2="100" style="stroke:var(--fg2)"/>
+  <line x1="330" y1="94" x2="330" y2="106" style="stroke:var(--fg2)"/>
+  <text x="330" y="62" text-anchor="middle" style="fill:var(--fg)">2 Aug 2026</text>
+  <text x="330" y="80" text-anchor="middle" style="fill:var(--fg2)">Art. 50 + Art. 101</text>
+  <line x1="452" y1="94" x2="452" y2="106" style="stroke:var(--fg2)"/>
+  <text x="452" y="124" text-anchor="middle" style="fill:var(--fg)">2 Dec 2026</text>
+  <text x="452" y="142" text-anchor="middle" style="fill:var(--fg2)">marking transition ends</text>
+  <line x1="578" y1="94" x2="578" y2="106" style="stroke:var(--fg2)"/>
+  <text x="578" y="62" text-anchor="middle" style="fill:var(--fg)">2 Dec 2027</text>
+  <text x="578" y="80" text-anchor="middle" style="fill:var(--fg2)">Annex III (was 2 Aug 2026)</text>
+  <line x1="692" y1="94" x2="692" y2="106" style="stroke:var(--fg2)"/>
+  <text x="692" y="124" text-anchor="middle" style="fill:var(--fg)">2 Aug 2028</text>
+  <text x="692" y="142" text-anchor="middle" style="fill:var(--fg2)">Annex I embedded</text>
+  <text x="8" y="174" text-anchor="start" style="fill:var(--fg2)">the regime expected on 2 Aug 2026 moved by 16 months; DORA did not move</text>
+</svg></div>
+
 <h2>You do not have to label AI-written code</h2>
 
 <p>The most useful thing in the new guidelines, and unambiguous. On the scope of the
@@ -225,6 +256,32 @@ against the Official Journal before relying on them.</p>
 </ul>
 
 <p>None of it cares who typed the diff. No gap to fill, no exemption to claim.</p>
+
+<div class="diagram"><svg viewBox="0 0 760 176" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="The AI Act is the document teams read about: its high-risk regime starts in December 2027, and Article 50 marks model output rather than a repository, with source code expressly excluded. What actually governs an agent-written change is DORA and Commission Delegated Regulation 2024/1774: change management, testing and controlled implementation and verification, which never ask who typed the diff.">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/>
+    </marker>
+  </defs>
+  <text x="8" y="22" text-anchor="start" style="fill:var(--fg2)">what teams read about</text>
+  <rect x="8" y="34" width="340" height="126" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="5 4"/>
+  <text x="178" y="58" text-anchor="middle" style="fill:var(--fg)">AI Act</text>
+  <text x="178" y="80" text-anchor="middle" style="fill:var(--fg2)">high-risk regime: December 2027</text>
+  <text x="178" y="102" text-anchor="middle" style="fill:var(--fg2)">Art. 50 marks the model output,</text>
+  <text x="178" y="124" text-anchor="middle" style="fill:var(--fg2)">not your repository</text>
+  <text x="178" y="146" text-anchor="middle" style="fill:var(--fg2)">source code expressly excluded</text>
+  <text x="380" y="100" text-anchor="middle" style="fill:var(--fg2)">vs</text>
+  <text x="412" y="22" text-anchor="start" style="fill:var(--fg2)">what actually governs the diff</text>
+  <rect x="412" y="34" width="340" height="126" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="582" y="58" text-anchor="middle" style="fill:var(--fg)">DORA + CDR (EU) 2024/1774</text>
+  <text x="582" y="80" text-anchor="middle" style="fill:var(--fg2)">change management and testing</text>
+  <text x="582" y="102" text-anchor="middle" style="fill:var(--fg2)">controlled implementation</text>
+  <text x="582" y="124" text-anchor="middle" style="fill:var(--fg2)">and verification of changes</text>
+  <text x="582" y="146" text-anchor="middle" style="fill:var(--fg2)">never asks who typed it</text>
+</svg></div>
 
 <h2>The four-eyes problem, stated properly</h2>
 
