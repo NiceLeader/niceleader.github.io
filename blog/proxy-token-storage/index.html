@@ -131,6 +131,38 @@ has no state worth reading. Two addresses, one token, and only one of them is re
 your ledger.
 </div>
 
+<div class="diagram"><svg viewBox="0 0 760 218" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="A proxy token is two contracts. The caller talks to the proxy, which holds every storage slot including balances, and borrows code from the implementation through delegatecall. Every read and write lands in the proxy. Tokens transferred directly to the implementation address have no owner and cannot be recovered.">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/>
+    </marker>
+  </defs>
+  <text x="389" y="26" text-anchor="middle" style="fill:var(--fg2)">delegatecall</text>
+  <rect x="8" y="58" width="104" height="44" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="60" y="85" text-anchor="middle" style="fill:var(--fg)">caller</text>
+  <line x1="112" y1="80" x2="156" y2="80" style="stroke:var(--fg2)" marker-end="url(#a1)"/>
+  <rect x="160" y="40" width="200" height="80" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="260" y="64" text-anchor="middle" style="fill:var(--fg)">PROXY</text>
+  <text x="260" y="84" text-anchor="middle" style="fill:var(--fg2)">storage lives here</text>
+  <text x="260" y="102" text-anchor="middle" style="fill:var(--fg2)">balances, allowances</text>
+  <line x1="360" y1="80" x2="414" y2="80" style="stroke:var(--fg2)" marker-end="url(#a1)"/>
+  <rect x="418" y="40" width="200" height="80" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="518" y="64" text-anchor="middle" style="fill:var(--fg)">IMPLEMENTATION</text>
+  <text x="518" y="84" text-anchor="middle" style="fill:var(--fg2)">code lives here</text>
+  <text x="518" y="102" text-anchor="middle" style="fill:var(--fg2)">its storage: empty</text>
+  <line x1="260" y1="158" x2="260" y2="124" style="stroke:var(--accent)" marker-end="url(#a2)"/>
+  <line x1="518" y1="158" x2="518" y2="124" style="stroke:var(--fg2)" stroke-dasharray='5 4' marker-end="url(#a1)"/>
+  <rect x="160" y="160" width="200" height="44" rx="8" style="fill:var(--code);stroke:var(--accent)" stroke-dasharray='5 4'/>
+  <text x="260" y="180" text-anchor="middle" style="fill:var(--fg)">every read and write</text>
+  <text x="260" y="197" text-anchor="middle" style="fill:var(--fg2)">lands in these slots</text>
+  <rect x="418" y="160" width="200" height="44" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray='5 4'/>
+  <text x="518" y="180" text-anchor="middle" style="fill:var(--fg2)">tokens sent here</text>
+  <text x="518" y="197" text-anchor="middle" style="fill:var(--fg2)">no owner, no recovery</text>
+</svg></div>
+
 <h2>Money sent to the implementation is gone</h2>
 
 <p>Follow the model one step further and you get the classic loss path. Someone - a

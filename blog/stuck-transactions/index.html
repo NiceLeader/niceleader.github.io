@@ -181,6 +181,41 @@ prove its blockhash expired, and only then rebuild with a fresh blockhash under 
 same idempotency key. For signing flows too slow for a 60-90 second window (cold
 storage, multi-approval), durable nonces let you opt out of expiry.</p>
 
+<div class="diagram"><svg viewBox="0 0 760 232" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Three chains, three remedies. On Bitcoin a low-fee transaction is replaced through RBF or pulled in by a child paying for the parent. On Ethereum the nonce is the blocker: the same nonce is resent with a higher tip and later nonces wait. On Solana an expired blockhash makes the network drop the transaction on its own.">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/>
+    </marker>
+  </defs>
+  <text x="8" y="22" text-anchor="start" style="fill:var(--fg2)">why it sticks</text>
+  <text x="300" y="22" text-anchor="start" style="fill:var(--fg2)">the remedy</text>
+  <text x="8" y="62" text-anchor="start" style="fill:var(--fg)">Bitcoin</text>
+  <rect x="96" y="36" width="190" height="46" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="5 4"/>
+  <text x="191" y="64" text-anchor="middle" style="fill:var(--fg2)">fee below the floor</text>
+  <line x1="286" y1="59" x2="330" y2="59" style="stroke:var(--fg2)" marker-end="url(#a1)"/>
+  <rect x="332" y="36" width="300" height="46" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="482" y="56" text-anchor="middle" style="fill:var(--fg)">RBF: replace, same inputs</text>
+  <text x="482" y="73" text-anchor="middle" style="fill:var(--fg2)">CPFP: child pays for parent</text>
+  <text x="8" y="124" text-anchor="start" style="fill:var(--fg)">Ethereum</text>
+  <rect x="96" y="98" width="190" height="46" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="5 4"/>
+  <text x="191" y="126" text-anchor="middle" style="fill:var(--fg2)">nonce N still pending</text>
+  <line x1="286" y1="121" x2="330" y2="121" style="stroke:var(--fg2)" marker-end="url(#a1)"/>
+  <rect x="332" y="98" width="300" height="46" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="482" y="118" text-anchor="middle" style="fill:var(--fg)">resend nonce N, higher tip</text>
+  <text x="482" y="135" text-anchor="middle" style="fill:var(--fg2)">N+1 waits until N clears</text>
+  <text x="8" y="186" text-anchor="start" style="fill:var(--fg)">Solana</text>
+  <rect x="96" y="160" width="190" height="46" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="5 4"/>
+  <text x="191" y="188" text-anchor="middle" style="fill:var(--fg2)">blockhash expires</text>
+  <line x1="286" y1="183" x2="330" y2="183" style="stroke:var(--accent)" marker-end="url(#a2)"/>
+  <rect x="332" y="160" width="300" height="46" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="482" y="180" text-anchor="middle" style="fill:var(--fg)">the network drops it</text>
+  <text x="482" y="197" text-anchor="middle" style="fill:var(--fg2)">no manual step, ~60 to 90 s</text>
+  <text x="8" y="218" text-anchor="start" style="fill:var(--fg2)">the operator decides; the policy decides who may raise the fee</text>
+</svg></div>
+
 <h2>The ops layer: wiring remediation to policy</h2>
 
 <p>Each remediation above is mechanical, and the teams who run calm systems have wired

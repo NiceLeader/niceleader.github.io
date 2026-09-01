@@ -207,6 +207,38 @@ exists, where before you depended on a runtime check somebody remembered to writ
 the same layout and the same eight bytes as the <code>i64</code> inside it. The
 currency tag costs you nothing at runtime.</p>
 
+<div class="diagram"><svg viewBox="0 0 760 216" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="A bare integer lets dollars and euros add together and the program still compiles. Wrapping each amount in a currency-tagged type makes the same expression a compile error. Typestate takes it further: a payment moves from Draft to Authorized to Settled, and no method returns it to an earlier state.">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/>
+    </marker>
+  </defs>
+  <rect x="8" y="32" width="340" height="74" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="5 4"/>
+  <text x="178" y="54" text-anchor="middle" style="fill:var(--fg)">amount: i64</text>
+  <text x="178" y="74" text-anchor="middle" style="fill:var(--fg2)">usd_cents + eur_cents</text>
+  <text x="178" y="92" text-anchor="middle" style="fill:var(--fg2)">compiles, ships, silently wrong</text>
+  <rect x="412" y="32" width="340" height="74" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="582" y="54" text-anchor="middle" style="fill:var(--fg)">Money&lt;Usd&gt; + Money&lt;Eur&gt;</text>
+  <text x="582" y="74" text-anchor="middle" style="fill:var(--fg2)">mismatched types</text>
+  <text x="582" y="92" text-anchor="middle" style="fill:var(--fg2)">rejected by the compiler</text>
+  <text x="380" y="74" text-anchor="middle" style="fill:var(--fg2)">vs</text>
+  <text x="8" y="142" text-anchor="start" style="fill:var(--fg2)">typestate: the lifecycle the compiler enforces</text>
+  <rect x="8" y="156" width="168" height="42" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="92" y="182" text-anchor="middle" style="fill:var(--fg)">Draft</text>
+  <rect x="200" y="156" width="168" height="42" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="284" y="182" text-anchor="middle" style="fill:var(--fg)">Authorized</text>
+  <rect x="392" y="156" width="168" height="42" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="476" y="182" text-anchor="middle" style="fill:var(--fg)">Settled</text>
+  <line x1="176" y1="177" x2="198" y2="177" style="stroke:var(--fg2)" marker-end="url(#a1)"/>
+  <line x1="368" y1="177" x2="390" y2="177" style="stroke:var(--fg2)" marker-end="url(#a1)"/>
+  <rect x="584" y="156" width="168" height="42" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="5 4"/>
+  <text x="668" y="182" text-anchor="middle" style="fill:var(--fg2)">no method back</text>
+  <line x1="582" y1="177" x2="562" y2="177" style="stroke:var(--fg2)" stroke-dasharray="5 4" marker-end="url(#a1)"/>
+</svg></div>
+
 <h2>4. Conversions go through a rate that knows its direction</h2>
 
 <p>Once cross-currency addition cannot compile, the only way to combine currencies is a

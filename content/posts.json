@@ -23,7 +23,7 @@
       "title": "Money in Rust: Making Illegal States Unrepresentable",
       "description": "Newtypes, phantom-typed currencies, checked arithmetic and typestate - how much of a financial bug class the compiler can take off your hands, for zero bytes.",
       "date": "2026-07-25",
-      "modified": "2026-08-13",
+      "modified": "2026-09-01",
       "track": "Engineering notes",
       "status": "published",
       "related": [
@@ -89,12 +89,13 @@
       "title": "Stuck Transactions at Scale",
       "description": "RBF, CPFP, nonce queues, expiring blockhashes and the pinning problem - a remediation playbook for transactions that will not confirm.",
       "date": "2026-07-22",
-      "modified": "2026-08-13",
+      "modified": "2026-09-01",
       "track": "Custody engineering",
       "status": "published",
       "related": [
         "transaction-state-machines",
-        "utxo-coin-selection"
+        "utxo-coin-selection",
+        "deposit-detection"
       ]
     },
     {
@@ -106,8 +107,10 @@
       "status": "published",
       "related": [
         "ai-agents-production",
-        "training-data-noise"
-      ]
+        "training-data-noise",
+        "rust-money-types"
+      ],
+      "modified": "2026-09-01"
     },
     {
       "slug": "ai-agents-production",
@@ -118,8 +121,10 @@
       "status": "published",
       "related": [
         "rust-money-types",
-        "transaction-state-machines"
-      ]
+        "transaction-state-machines",
+        "agents-regulated-code"
+      ],
+      "modified": "2026-09-01"
     },
     {
       "slug": "training-data-noise",
@@ -130,8 +135,10 @@
       "status": "published",
       "related": [
         "backtest-lies",
-        "ai-agents-production"
-      ]
+        "ai-agents-production",
+        "point-in-time-balances"
+      ],
+      "modified": "2026-09-01"
     },
     {
       "slug": "proxy-token-storage",
@@ -142,8 +149,10 @@
       "status": "published",
       "related": [
         "deposit-detection",
-        "point-in-time-balances"
-      ]
+        "point-in-time-balances",
+        "transaction-state-machines"
+      ],
+      "modified": "2026-09-01"
     },
     {
       "slug": "taproot-multisig-privacy",
@@ -154,8 +163,10 @@
       "status": "published",
       "related": [
         "sighash-policy",
-        "utxo-coin-selection"
-      ]
+        "utxo-coin-selection",
+        "stuck-transactions"
+      ],
+      "modified": "2026-09-01"
     },
     {
       "slug": "point-in-time-balances",
@@ -179,8 +190,10 @@
       "status": "published",
       "related": [
         "taproot-multisig-privacy",
-        "stuck-transactions"
-      ]
+        "stuck-transactions",
+        "point-in-time-balances"
+      ],
+      "modified": "2026-09-01"
     }
   ]
 }

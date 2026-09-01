@@ -141,6 +141,41 @@ reconstruction:</p>
 for someone else to modify a transaction you signed. That is sometimes exactly what you
 want. It is never something you want by accident.</p>
 
+<div class="diagram"><svg viewBox="0 0 760 240" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="What each sighash flag commits to. SIGHASH_ALL signs every input and every output. SIGHASH_NONE signs the inputs and leaves every output rewritable. SIGHASH_SINGLE signs the inputs and only the output at the same index. ANYONECANPAY narrows the input commitment to your own input.">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/>
+    </marker>
+  </defs>
+  <text x="220" y="22" text-anchor="middle" style="fill:var(--fg2)">INPUTS</text>
+  <text x="520" y="22" text-anchor="middle" style="fill:var(--fg2)">OUTPUTS</text>
+  <text x="8" y="58" text-anchor="start" style="fill:var(--fg)">SIGHASH_ALL</text>
+  <rect x="120" y="36" width="200" height="34" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="220" y="58" text-anchor="middle" style="fill:var(--fg)">every input signed</text>
+  <rect x="420" y="36" width="200" height="34" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="520" y="58" text-anchor="middle" style="fill:var(--fg)">every output signed</text>
+  <text x="8" y="104" text-anchor="start" style="fill:var(--fg)">SIGHASH_NONE</text>
+  <rect x="120" y="82" width="200" height="34" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="220" y="104" text-anchor="middle" style="fill:var(--fg)">every input signed</text>
+  <rect x="420" y="82" width="200" height="34" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="5 4"/>
+  <text x="520" y="104" text-anchor="middle" style="fill:var(--fg2)">anyone may rewrite</text>
+  <text x="8" y="150" text-anchor="start" style="fill:var(--fg)">SIGHASH_SINGLE</text>
+  <rect x="120" y="128" width="200" height="34" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="220" y="150" text-anchor="middle" style="fill:var(--fg)">every input signed</text>
+  <rect x="420" y="128" width="200" height="34" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="5 4"/>
+  <text x="520" y="150" text-anchor="middle" style="fill:var(--fg2)">only output at same index</text>
+  <text x="8" y="196" text-anchor="start" style="fill:var(--fg)">+ ANYONECANPAY</text>
+  <rect x="120" y="174" width="200" height="34" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="5 4"/>
+  <text x="220" y="196" text-anchor="middle" style="fill:var(--fg2)">only your own input</text>
+  <rect x="420" y="174" width="200" height="34" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="5 4"/>
+  <text x="520" y="196" text-anchor="middle" style="fill:var(--fg2)">per the base flag</text>
+  <text x="8" y="226" text-anchor="start" style="fill:var(--fg2)">solid = committed by the signature</text>
+  <text x="420" y="226" text-anchor="start" style="fill:var(--fg2)">dashed = still rewritable by anyone</text>
+</svg></div>
+
 <h2>The footguns are not theoretical</h2>
 
 <p>The legacy sighash algorithm has a famous bug. If you sign an input with

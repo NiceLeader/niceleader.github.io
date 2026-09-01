@@ -158,6 +158,33 @@ in the happy path and one branch in the unhappy one. Your on-chain footprint bec
 proportional to how bad your day was.
 </div>
 
+<div class="diagram"><svg viewBox="0 0 760 210" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="A classic P2WSH multisig spend publishes the script, all three public keys and two signatures, so the custody policy is visible on chain forever. A Taproot key-path spend with MuSig2 publishes a single signature that looks identical to an ordinary single-signature wallet.">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/>
+    </marker>
+  </defs>
+  <text x="8" y="22" text-anchor="start" style="fill:var(--fg2)">on the wire</text>
+  <text x="430" y="22" text-anchor="start" style="fill:var(--fg2)">what any observer learns</text>
+  <rect x="8" y="36" width="250" height="62" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="133" y="60" text-anchor="middle" style="fill:var(--fg)">P2WSH 2-of-3 spend</text>
+  <text x="133" y="80" text-anchor="middle" style="fill:var(--fg2)">script + 3 pubkeys + 2 sigs</text>
+  <line x1="258" y1="67" x2="424" y2="67" style="stroke:var(--fg2)" marker-end="url(#a1)"/>
+  <rect x="426" y="36" width="326" height="62" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="5 4"/>
+  <text x="589" y="60" text-anchor="middle" style="fill:var(--fg)">your quorum, your key count,</text>
+  <text x="589" y="80" text-anchor="middle" style="fill:var(--fg2)">your policy: all public forever</text>
+  <rect x="8" y="130" width="250" height="62" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="133" y="154" text-anchor="middle" style="fill:var(--fg)">Taproot key path</text>
+  <text x="133" y="174" text-anchor="middle" style="fill:var(--fg2)">one 64-byte signature</text>
+  <line x1="258" y1="161" x2="424" y2="161" style="stroke:var(--accent)" marker-end="url(#a2)"/>
+  <rect x="426" y="130" width="326" height="62" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="589" y="154" text-anchor="middle" style="fill:var(--fg)">one key spent one output:</text>
+  <text x="589" y="174" text-anchor="middle" style="fill:var(--fg2)">identical to any single-sig wallet</text>
+</svg></div>
+
 <h2>The fine print: MuSig2 in operations</h2>
 
 <p>Now the part the conference talks skim. MuSig2 is interactive, and both rounds need
