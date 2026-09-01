@@ -13,7 +13,7 @@
       "AI-assisted engineering"
     ],
     "pageDates": {
-      "home": "2026-08-13",
+      "home": "2026-08-19",
       "services": "2026-08-02"
     }
   },
@@ -28,7 +28,8 @@
       "status": "published",
       "related": [
         "backtest-lies",
-        "transaction-state-machines"
+        "transaction-state-machines",
+        "ai-agents-production"
       ]
     },
     {
@@ -102,15 +103,23 @@
       "description": "A practical reading of AI-assisted engineering obligations and evidence expectations in regulated software delivery.",
       "date": "2026-07-25",
       "track": "AI-assisted engineering",
-      "status": "draft"
+      "status": "published",
+      "related": [
+        "ai-agents-production",
+        "training-data-noise"
+      ]
     },
     {
       "slug": "ai-agents-production",
-      "title": "What Actually Changes When Agents Write Your Code",
-      "description": "Context, decomposition, review and guardrails for production software built with coding agents.",
-      "date": "2026-07-25",
+      "title": "AI Coding Agents in Production: What Actually Changes",
+      "description": "A field-tested operating model for using AI coding agents in production: context, task decomposition, review, guardrails and the real verification cost.",
+      "date": "2026-08-19",
       "track": "AI-assisted engineering",
-      "status": "draft"
+      "status": "published",
+      "related": [
+        "rust-money-types",
+        "transaction-state-machines"
+      ]
     },
     {
       "slug": "training-data-noise",
@@ -118,7 +127,11 @@
       "description": "Why short training logs are noisy time series, and how to distinguish adherence from meaningful signal.",
       "date": "2026-07-25",
       "track": "Engineering notes",
-      "status": "draft"
+      "status": "published",
+      "related": [
+        "backtest-lies",
+        "ai-agents-production"
+      ]
     },
     {
       "slug": "proxy-token-storage",
@@ -126,7 +139,11 @@
       "description": "Delegatecall, proxy storage and the custody consequences of upgradeable token architecture.",
       "date": "2026-07-30",
       "track": "Custody engineering",
-      "status": "draft"
+      "status": "published",
+      "related": [
+        "deposit-detection",
+        "point-in-time-balances"
+      ]
     },
     {
       "slug": "taproot-multisig-privacy",
@@ -134,7 +151,11 @@
       "description": "Taproot, MuSig2 and the operational trade-offs between privacy, cost and auditability in custody.",
       "date": "2026-08-06",
       "track": "Custody engineering",
-      "status": "draft"
+      "status": "published",
+      "related": [
+        "sighash-policy",
+        "utxo-coin-selection"
+      ]
     },
     {
       "slug": "point-in-time-balances",
@@ -155,7 +176,11 @@
       "description": "Why Bitcoin signature hash modes belong in custody policy rather than transaction plumbing.",
       "date": "2026-08-13",
       "track": "Custody engineering",
-      "status": "scheduled"
+      "status": "published",
+      "related": [
+        "taproot-multisig-privacy",
+        "stuck-transactions"
+      ]
     }
   ]
 }

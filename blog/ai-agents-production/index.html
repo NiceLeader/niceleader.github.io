@@ -3,30 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>What Actually Changes When Agents Write Your Code - Maciej Lewandowski</title>
-<meta name="description" content="The bottleneck moved from writing code to verifying it. Context, decomposition, guardrails and the honest costs of running coding agents on real production codebases.">
+<meta name="color-scheme" content="light dark">
+<title>AI Coding Agents in Production: What Actually Changes</title>
+<meta name="description" content="A field-tested operating model for using AI coding agents in production: context, task decomposition, review, guardrails and the real verification cost.">
 <link rel="canonical" href="https://maciejlewandowski.dev/blog/ai-agents-production/">
 <meta property="og:type" content="article">
-<meta property="og:title" content="What Actually Changes When Agents Write Your Code">
-<meta property="og:description" content="Writing code stopped being the constraint. Verifying it became one. Notes from running agents daily on production codebases.">
+<meta property="og:title" content="AI Coding Agents in Production: What Actually Changes">
+<meta property="og:description" content="Writing code stopped being the constraint. Verifying it became one. A field-tested operating model for coding agents in production.">
 <meta property="og:url" content="https://maciejlewandowski.dev/blog/ai-agents-production/">
 <meta property="og:image" content="https://maciejlewandowski.dev/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://maciejlewandowski.dev/og.png">
 <meta name="theme-color" content="#0d1117">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "TechArticle",
-  "headline": "What Actually Changes When Agents Write Your Code",
-  "datePublished": "2026-07-25",
+  "headline": "AI Coding Agents in Production: What Actually Changes",
+  "datePublished": "2026-08-19",
   "author": { "@type": "Person", "name": "Maciej Lewandowski", "url": "https://maciejlewandowski.dev/" },
   "publisher": { "@type": "Person", "name": "Maciej Lewandowski" },
   "mainEntityOfPage": "https://maciejlewandowski.dev/blog/ai-agents-production/"
 }
 </script>
 <style>
+html { color-scheme: light dark; }
 :root {
   --bg: #ffffff; --bg2: #f6f8fa; --fg: #1f2328; --fg2: #59636e;
   --accent: #0969da; --border: #d1d9e0; --code: #f6f8fa;
@@ -44,9 +46,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 .wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
-nav { padding: 28px 0; }
-nav a { color: var(--fg2); text-decoration: none; font-size: 0.95rem; }
+nav { padding: 20px 0; }
+nav a { align-items: center; color: var(--fg2); display: inline-flex; min-height: 44px; text-decoration: none; font-size: 0.95rem; }
 nav a:hover { color: var(--accent); }
+a { color: var(--accent); }
+a:focus-visible { border-radius: 3px; outline: 3px solid var(--accent); outline-offset: 4px; }
+.skip-link { background: var(--fg); color: var(--bg); font-weight: 700; left: 16px; padding: 10px 14px; position: fixed; top: 12px; transform: translateY(-180%); z-index: 100; }
+.skip-link:focus { transform: translateY(0); }
 article { padding: 16px 0 64px; }
 h1 { font-size: 2.1rem; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
 .meta { color: var(--fg2); font-size: 0.92rem; margin-bottom: 36px; }
@@ -75,7 +81,7 @@ strong { font-weight: 600; }
   padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 18px; color: var(--fg);
 }
 footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
-footer a { color: var(--accent); text-decoration: none; }
+footer a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 .diagram { margin: 8px 0 26px; }
 .diagram svg { width: 100%; height: auto; display: block; }
 @media (max-width: 760px) {
@@ -83,16 +89,18 @@ footer a { color: var(--accent); text-decoration: none; }
   .diagram svg { width: auto; height: 190px; }
 }
 </style>
-<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "92728f4c07bb4620a6b29641e7008b91"}'></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;:&quot;92728f4c07bb4620a6b29641e7008b91&quot;}"></script>
 </head>
 <body>
+<a class="skip-link" href="#main-content">Skip to content</a>
 <div class="wrap">
 
-<nav><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/blog/">All posts</a></nav>
+<nav aria-label="Article"><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/blog/">All posts</a></nav>
 
+<main id="main-content">
 <article>
-<h1>What Actually Changes When Agents Write Your Code</h1>
-<p class="meta">Maciej Lewandowski &middot; July 2026 &middot; Engineering notes</p>
+<h1>AI Coding Agents in Production: What Actually Changes</h1>
+<p class="meta">Maciej Lewandowski &middot; <time datetime="2026-08-19">August 2026</time> &middot; AI-assisted engineering</p>
 
 <p>I run agents against real codebases most working days. Not toy repos, not greenfield
 demos: existing systems with history, invariants nobody wrote down, and money moving
@@ -379,11 +387,19 @@ ledger.</p>
   nothing back.</li>
 </ol>
 
+<div class="callout">
+<strong>Bringing coding agents into a production engineering workflow?</strong> I help
+teams establish the repository context, review boundaries and verification gates that
+make the speed useful without lowering the standard. See
+<a href="/services/">engineering services and engagement options</a>.
+</div>
+
 <p>The job did not get easier and it did not get automated. It got rebalanced: less time
 producing, far more time deciding what is true. Which is, if you think about it, what
 senior engineering was always mostly made of. The typing was just hiding it.</p>
 
 </article>
+</main>
 
 <footer>
   <p>Maciej Lewandowski &middot; Senior Blockchain Engineer &middot;
