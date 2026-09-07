@@ -206,6 +206,7 @@ const page = `<!DOCTYPE html>
     <div class="nav-links">
       <a href="/services/">Services</a>
       <a href="/blog/">Writing</a>
+      <a href="/eur-stablecoins/" aria-current="page">Supply</a>
       <a href="https://github.com/NiceLeader">GitHub</a>
       <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a>
     </div>
