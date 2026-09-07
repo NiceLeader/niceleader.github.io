@@ -1,8 +1,8 @@
 {
-  "takenAt": "2026-09-07T20:37:53.522Z",
+  "takenAt": "2026-09-07T20:49:02.567Z",
   "chainId": 1,
-  "block": 25927912,
-  "blockTime": "2026-09-07T20:37:47.000Z",
+  "block": 25927968,
+  "blockTime": "2026-09-07T20:48:59.000Z",
   "rpc": "https://eth.drpc.org",
   "readings": [
     {
