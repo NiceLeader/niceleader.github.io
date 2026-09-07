@@ -1,0 +1,112 @@
+/* Euro stablecoin supply page. Extends site.css; no inline styles (CSP). */
+
+.supply-list {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.supply-row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) minmax(12rem, 1.1fr) minmax(16rem, 2fr);
+  gap: 1rem 1.5rem;
+  padding: 1.25rem 0;
+  border-top: 1px solid var(--rule, rgba(128, 128, 128, 0.35));
+}
+
+.supply-row:last-child {
+  border-bottom: 1px solid var(--rule, rgba(128, 128, 128, 0.35));
+}
+
+.supply-head h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.supply-name {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 400;
+  opacity: 0.75;
+  margin-top: 0.15rem;
+}
+
+.supply-issuer {
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+}
+
+.supply-label {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  margin-bottom: 0.3rem;
+}
+
+.supply-fine .supply-label,
+.supply-notice .supply-label {
+  display: inline;
+  margin: 0 0.35rem 0 0;
+}
+
+.supply-number {
+  display: block;
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.supply-fact .supply-fine,
+.supply-quote .supply-fine {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  opacity: 0.8;
+  word-break: break-word;
+}
+
+.supply-fact a,
+.supply-quote a {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.supply-quote blockquote {
+  margin: 0;
+  padding: 0 0 0 0.9rem;
+  border-left: 2px solid currentColor;
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.supply-quote q {
+  quotes: "\201C" "\201D";
+}
+
+.supply-notice {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+}
+
+.supply-legal {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  opacity: 0.85;
+}
+
+main code {
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.92em;
+}
+
+@media (max-width: 760px) {
+  .supply-row {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+  }
+}

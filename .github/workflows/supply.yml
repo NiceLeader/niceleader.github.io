@@ -1,0 +1,61 @@
+name: Update euro stablecoin supply
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cloudflare-pages
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    environment:
+      name: production
+      url: https://maciejlewandowski.dev/eur-stablecoins/
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.22.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Read on-chain supply and render page
+        run: node scripts/supply/fetch-supply.mjs
+
+      - name: Commit snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add content/supply eur-stablecoins
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "supply: daily snapshot $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: Build and validate site
+        run: npm run check
+
+      - name: Deploy verified site to Cloudflare Pages
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.122.0"
+          command: pages deploy _site --project-name=maciejlewandowski-dev --branch=main --commit-hash=${{ github.sha }}

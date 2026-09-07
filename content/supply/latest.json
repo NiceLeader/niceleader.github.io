@@ -1,0 +1,59 @@
+{
+  "takenAt": "2026-09-07T20:37:53.522Z",
+  "chainId": 1,
+  "block": 25927912,
+  "blockTime": "2026-09-07T20:37:47.000Z",
+  "rpc": "https://eth.drpc.org",
+  "readings": [
+    {
+      "symbol": "EURC",
+      "contract": "0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c",
+      "decimals": 6,
+      "totalSupplyRaw": "292446974332964",
+      "totalSupply": "292446974.332964",
+      "totalSupplyDisplay": "292,446,974.33"
+    },
+    {
+      "symbol": "EURCV",
+      "contract": "0x5F7827FDeb7c20b443265Fc2F40845B715385Ff2",
+      "decimals": 18,
+      "totalSupplyRaw": "132735492040000000000000000",
+      "totalSupply": "132735492.04",
+      "totalSupplyDisplay": "132,735,492.04"
+    },
+    {
+      "symbol": "EURR",
+      "contract": "0x50753cfaf86c094925bf976f218d043f8791e408",
+      "decimals": 6,
+      "totalSupplyRaw": "17143032563007",
+      "totalSupply": "17143032.563007",
+      "totalSupplyDisplay": "17,143,032.56"
+    },
+    {
+      "symbol": "EURQ",
+      "contract": "0x8df723295214ea6f21026eeeb4382d475f146f9f",
+      "decimals": 6,
+      "totalSupplyRaw": "6000000000000",
+      "totalSupply": "6000000",
+      "totalSupplyDisplay": "6,000,000.00"
+    },
+    {
+      "symbol": "EURAU",
+      "contract": "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+      "decimals": 6,
+      "totalSupplyRaw": "256680640000",
+      "totalSupply": "256680.64",
+      "totalSupplyDisplay": "256,680.64"
+    },
+    {
+      "symbol": "EURe",
+      "contract": "0x39b8B6385416f4cA36a20319F70D28621895279D",
+      "decimals": 18,
+      "totalSupplyRaw": "3002010614585379420166901",
+      "totalSupply": "3002010.614585379420166901",
+      "totalSupplyDisplay": "3,002,010.61"
+    }
+  ],
+  "snapshotCount": 1,
+  "firstSnapshotDate": "2026-09-07"
+}
