@@ -1,25 +1,25 @@
 {
-  "takenAt": "2026-09-09T10:12:17.073Z",
+  "takenAt": "2026-09-10T10:06:48.984Z",
   "chainId": 1,
-  "block": 25939138,
-  "blockTime": "2026-09-09T10:12:11.000Z",
+  "block": 25946281,
+  "blockTime": "2026-09-10T10:06:35.000Z",
   "rpc": "https://eth.drpc.org",
   "readings": [
     {
       "symbol": "EURC",
       "contract": "0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c",
       "decimals": 6,
-      "totalSupplyRaw": "296311205400860",
-      "totalSupply": "296311205.40086",
-      "totalSupplyDisplay": "296,311,205.40"
+      "totalSupplyRaw": "297112559410860",
+      "totalSupply": "297112559.41086",
+      "totalSupplyDisplay": "297,112,559.41"
     },
     {
       "symbol": "EURCV",
       "contract": "0x5F7827FDeb7c20b443265Fc2F40845B715385Ff2",
       "decimals": 18,
-      "totalSupplyRaw": "138296082950000000000000000",
-      "totalSupply": "138296082.95",
-      "totalSupplyDisplay": "138,296,082.95"
+      "totalSupplyRaw": "138529532090000000000000000",
+      "totalSupply": "138529532.09",
+      "totalSupplyDisplay": "138,529,532.09"
     },
     {
       "symbol": "EURR",
@@ -49,11 +49,11 @@
       "symbol": "EURe",
       "contract": "0x39b8B6385416f4cA36a20319F70D28621895279D",
       "decimals": 18,
-      "totalSupplyRaw": "3135924014585379420166901",
-      "totalSupply": "3135924.014585379420166901",
-      "totalSupplyDisplay": "3,135,924.01"
+      "totalSupplyRaw": "2901204344585379420166901",
+      "totalSupply": "2901204.344585379420166901",
+      "totalSupplyDisplay": "2,901,204.34"
     }
   ],
-  "snapshotCount": 3,
+  "snapshotCount": 4,
   "firstSnapshotDate": "2026-09-07"
 }
