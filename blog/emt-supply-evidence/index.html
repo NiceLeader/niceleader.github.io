@@ -134,6 +134,20 @@ unrelated tokens called EURR, one from StablR in Malta and one from Bridge Build
 Luxembourg offered through Revolut. A registry keyed by ticker would have silently merged
 them.</p>
 
+<div class="diagram"><svg viewBox="0 0 760 150" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="One ticker, two tokens. The label EURR points to two unrelated contracts: StablR on Ethereum, and Bridge Building S.A. whose address the issuer has not yet published. Identity in the registry is chain plus contract, so the two stay separate.">
+  <rect x="300" y="14" width="160" height="40" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="380" y="39" text-anchor="middle" style="fill:var(--fg)">ticker "EURR"</text>
+  <line x1="340" y1="54" x2="190" y2="92" style="stroke:var(--fg2)" stroke-width="1.5"/>
+  <line x1="420" y1="54" x2="572" y2="92" style="stroke:var(--fg2)" stroke-width="1.5"/>
+  <text x="380" y="78" text-anchor="middle" style="fill:var(--fg2);font-size:11px">identity = chain + contract, never the label</text>
+  <rect x="20" y="94" width="340" height="44" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="190" y="112" text-anchor="middle" style="fill:var(--fg)">StablR Ltd, Malta, since 2024</text>
+  <text x="190" y="130" text-anchor="middle" style="fill:var(--fg2);font-size:11px">1:0x50753CfA...e408</text>
+  <rect x="400" y="94" width="345" height="44" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="572" y="112" text-anchor="middle" style="fill:var(--fg)">Bridge Building S.A., Luxembourg, Aug 2026</text>
+  <text x="572" y="130" text-anchor="middle" style="fill:var(--fg2);font-size:11px">1:0x... not yet published by the issuer</text>
+</svg></div>
+
 <p>A run pins a block, either by number or as the last block at or before a UTC timestamp, and
 reads <code>totalSupply</code> for every contract at that block through at least two RPC
 endpoints run by different operators. The endpoints have to agree. If they do not, the run
@@ -218,6 +232,24 @@ pending with the URLs checked rather than guessing, and the packs carry an empty
 list. If an issuer wants an independent circulating figure, publishing those addresses is the
 one thing only they can do.</p>
 
+<div class="diagram"><svg viewBox="0 0 760 170" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Total supply minus exclusions equals redeemable supply. The exclusions box lists treasury, minter, bridge-lock, blocked and test balances, each needing an issuer-published address. For the tokens read, no such address was found, so only the gross figure is reported.">
+  <rect x="8" y="50" width="170" height="70" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="93" y="79" text-anchor="middle" style="fill:var(--fg)">totalSupply()</text>
+  <text x="93" y="99" text-anchor="middle" style="fill:var(--fg2);font-size:11px">read at the pinned block</text>
+  <text x="206" y="90" text-anchor="middle" style="fill:var(--fg)">minus</text>
+  <rect x="234" y="22" width="270" height="126" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="6 4"/>
+  <text x="369" y="44" text-anchor="middle" style="fill:var(--fg)">exclusions, each with an issuer source</text>
+  <text x="250" y="68" text-anchor="start" style="fill:var(--fg2)">treasury / mint address</text>
+  <text x="250" y="86" text-anchor="start" style="fill:var(--fg2)">bridge-lock contract</text>
+  <text x="250" y="104" text-anchor="start" style="fill:var(--fg2)">blocked (blacklisted) balances</text>
+  <text x="250" y="122" text-anchor="start" style="fill:var(--fg2)">test balances</text>
+  <text x="369" y="141" text-anchor="middle" style="fill:var(--accent);font-size:11px">Circle, Monerium, Schuman: none published</text>
+  <text x="526" y="90" text-anchor="middle" style="fill:var(--fg)">equals</text>
+  <rect x="548" y="50" width="204" height="70" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="650" y="79" text-anchor="middle" style="fill:var(--fg)">redeemable supply</text>
+  <text x="650" y="99" text-anchor="middle" style="fill:var(--fg2);font-size:11px">today: equal to gross</text>
+</svg></div>
+
 <h2>Finding 2: the register is not the market</h2>
 
 <p>The ESMA interim register lists 24 authorised EMT issuers. Reading every issuer's own
@@ -228,6 +260,30 @@ Banking Circle's EURI white paper and audit report describe the product without 
 address. Bridge's EURR transparency link, as published in the register, returns 404. An active
 row in the register is not evidence of active minting, and a ticker match on an explorer is
 not an issuer source.</p>
+
+<div class="diagram"><svg viewBox="0 0 760 212" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="From register to registry. The ESMA interim register lists 24 authorised EMT issuers. Reading each issuer's own material yields eight admitted euro deployments. The rest stop at redemption-only status, a LEI that does not match, no mainnet address in the white paper, a dead transparency link, or a non-euro or non-EVM product.">
+  <rect x="8" y="60" width="150" height="80" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="83" y="88" text-anchor="middle" style="fill:var(--fg)">ESMA register</text>
+  <text x="83" y="108" text-anchor="middle" style="fill:var(--fg2);font-size:11px">24 authorised issuers</text>
+  <text x="83" y="126" text-anchor="middle" style="fill:var(--fg2);font-size:11px">47 EMT white papers</text>
+  <line x1="158" y1="100" x2="196" y2="100" style="stroke:var(--fg2)" stroke-width="1.5"/>
+  <rect x="198" y="60" width="150" height="80" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="273" y="88" text-anchor="middle" style="fill:var(--fg)">issuer's own pages</text>
+  <text x="273" y="108" text-anchor="middle" style="fill:var(--fg2);font-size:11px">white paper, contract</text>
+  <text x="273" y="126" text-anchor="middle" style="fill:var(--fg2);font-size:11px">table, audit, docs</text>
+  <line x1="348" y1="100" x2="386" y2="100" style="stroke:var(--fg2)" stroke-width="1.5"/>
+  <line x1="386" y1="100" x2="388" y2="42" style="stroke:var(--accent)" stroke-width="1.5"/>
+  <rect x="388" y="14" width="210" height="56" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="493" y="38" text-anchor="middle" style="fill:var(--fg)">admitted: 8 deployments</text>
+  <text x="493" y="56" text-anchor="middle" style="fill:var(--fg2);font-size:11px">address on the issuer's own site</text>
+  <rect x="388" y="82" width="364" height="122" rx="8" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="6 4"/>
+  <text x="400" y="102" text-anchor="start" style="fill:var(--fg)">pending, with the URLs checked:</text>
+  <text x="400" y="122" text-anchor="start" style="fill:var(--fg2)">EUROe: page now a redemption notice</text>
+  <text x="400" y="140" text-anchor="start" style="fill:var(--fg2)">EURW: LEI differs from the register row</text>
+  <text x="400" y="158" text-anchor="start" style="fill:var(--fg2)">EURI: no mainnet address in paper or audit</text>
+  <text x="400" y="176" text-anchor="start" style="fill:var(--fg2)">EURR (Bridge): register link returns 404</text>
+  <text x="400" y="194" text-anchor="start" style="fill:var(--fg2);font-size:11px">others: non-euro, non-EVM, or no address published</text>
+</svg></div>
 
 <h2>Finding 3: yesterday's evidence has a shelf life on free nodes</h2>
 
@@ -241,6 +297,22 @@ the right behaviour, but the lesson is operational: reproducing a quarter of end
 figures needs an archive endpoint, or a job that takes the snapshot minutes after midnight
 while the state still exists. The S 02.00 maximum, minimum and average cannot be computed
 after the fact from public infrastructure.</p>
+
+<div class="diagram"><svg viewBox="0 0 760 170" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Timeline of one pack on free RPC nodes. Snapshot at 15:52 UTC; verify minutes later returns identical. Next morning, verify returns historical state not available. The window in which a pack can be re-derived from free nodes closes within hours; an archive endpoint or a snapshot minutes after midnight keeps end-of-day figures reproducible.">
+  <line x1="30" y1="90" x2="730" y2="90" style="stroke:var(--fg2)" stroke-width="1.5"/>
+  <circle cx="90" cy="90" r="6" style="fill:var(--accent)"/>
+  <text x="90" y="70" text-anchor="middle" style="fill:var(--fg)">15:52 UTC snapshot</text>
+  <text x="90" y="112" text-anchor="middle" style="fill:var(--fg2);font-size:11px">block 25,969,531 pinned</text>
+  <circle cx="230" cy="90" r="6" style="fill:var(--accent)"/>
+  <text x="230" y="70" text-anchor="middle" style="fill:var(--fg)">+ minutes: verify</text>
+  <text x="230" y="112" text-anchor="middle" style="fill:var(--accent);font-size:11px">identical</text>
+  <rect x="300" y="78" width="200" height="24" rx="6" style="fill:var(--code);stroke:var(--border)" stroke-dasharray="6 4"/>
+  <text x="400" y="94" text-anchor="middle" style="fill:var(--fg2);font-size:11px">state expires on free nodes</text>
+  <circle cx="600" cy="90" r="6" fill="none" style="stroke:var(--accent)" stroke-width="2"/>
+  <text x="600" y="70" text-anchor="middle" style="fill:var(--fg)">next morning: verify</text>
+  <text x="600" y="112" text-anchor="middle" style="fill:var(--fg2);font-size:11px">"historical state is not available"</text>
+  <text x="380" y="150" text-anchor="middle" style="fill:var(--fg2);font-size:11px">end-of-day figures: snapshot minutes after midnight, or pay for archive state</text>
+</svg></div>
 
 <h2>What the pack does not prove</h2>
 
