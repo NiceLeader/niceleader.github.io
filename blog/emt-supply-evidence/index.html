@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reproducible Supply Evidence for Euro E-Money Tokens</title>
+<meta name="description" content="How to turn a stablecoin supply snapshot into evidence a third party can re-derive: pinned block, RPC quorum, canonical files, signed manifest. Eight euro EMTs, three chains, three findings.">
+<link rel="canonical" href="https://maciejlewandowski.dev/blog/emt-supply-evidence/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Reproducible Supply Evidence for Euro E-Money Tokens">
+<meta property="og:description" content="Eight euro e-money tokens read at pinned blocks through agreeing RPC endpoints and written as signed evidence packs. What the packs contain, what the runs found, where the approach breaks.">
+<meta property="og:url" content="https://maciejlewandowski.dev/blog/emt-supply-evidence/">
+<meta property="og:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://maciejlewandowski.dev/og.png">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Reproducible Supply Evidence for Euro E-Money Tokens",
+  "datePublished": "2026-09-15",
+  "author": { "@type": "Person", "name": "Maciej Lewandowski", "url": "https://maciejlewandowski.dev/" },
+  "publisher": { "@type": "Person", "name": "Maciej Lewandowski" },
+  "mainEntityOfPage": "https://maciejlewandowski.dev/blog/emt-supply-evidence/"
+}
+</script>
+<style>
+html { color-scheme: light dark; }
+:root {
+  --bg: #ffffff; --bg2: #f6f8fa; --fg: #1f2328; --fg2: #59636e;
+  --accent: #0969da; --border: #d1d9e0; --code: #f6f8fa;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --fg: #e6edf3; --fg2: #9198a1;
+    --accent: #58a6ff; --border: #30363d; --code: #161b22;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--fg); line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+nav { padding: 20px 0; }
+nav a { align-items: center; color: var(--fg2); display: inline-flex; min-height: 44px; text-decoration: none; font-size: 0.95rem; }
+nav a:hover { color: var(--accent); }
+a { color: var(--accent); }
+a:focus-visible { border-radius: 3px; outline: 3px solid var(--accent); outline-offset: 4px; }
+.skip-link { background: var(--fg); color: var(--bg); font-weight: 700; left: 16px; padding: 10px 14px; position: fixed; top: 12px; transform: translateY(-180%); z-index: 100; }
+.skip-link:focus { transform: translateY(0); }
+article { padding: 16px 0 64px; }
+h1 { font-size: 2.1rem; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
+.meta { color: var(--fg2); font-size: 0.92rem; margin-bottom: 36px; }
+h2 { font-size: 1.4rem; margin: 40px 0 14px; letter-spacing: -0.01em; }
+p { margin-bottom: 18px; }
+ul, ol { margin: 0 0 18px 26px; }
+li { margin-bottom: 8px; }
+code {
+  background: var(--code); border: 1px solid var(--border); border-radius: 5px;
+  padding: 2px 6px; font-size: 0.88em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+pre {
+  background: var(--code); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 16px; overflow-x: auto; margin-bottom: 18px;
+  font-size: 0.85rem; line-height: 1.55;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+pre code {
+  background: none; border: 0; border-radius: 0; padding: 0;
+  font-size: inherit; line-height: inherit;
+}
+strong { font-weight: 600; }
+.callout {
+  border-left: 3px solid var(--accent); background: var(--bg2);
+  padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 18px; color: var(--fg);
+}
+footer { padding: 32px 0 64px; border-top: 1px solid var(--border); color: var(--fg2); font-size: 0.9rem; }
+footer a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.diagram { margin: 8px 0 26px; }
+.diagram svg { width: 100%; height: auto; display: block; }
+@media (max-width: 760px) {
+  .diagram { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .diagram svg { width: auto; height: 190px; }
+}
+</style>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;:&quot;92728f4c07bb4620a6b29641e7008b91&quot;}"></script>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to content</a>
+<div class="wrap">
+
+<nav aria-label="Article"><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/blog/">All posts</a></nav>
+
+<main id="main-content">
+<article>
+<h1>One Block, Two Nodes, the Same Number: Reproducible Supply Evidence for Euro E-Money Tokens</h1>
+<p class="meta">Maciej Lewandowski &middot; 15 September 2026 &middot; Custody engineering</p>
+
+<div class="callout">
+<strong>What this is and is not.</strong> A note on producing the on-chain half of a stablecoin
+reserve reconciliation as evidence a third party can re-derive. It reads chain state only. It
+proves nothing about reserves, backing or compliance, and every number below can be recomputed
+from the packs described.
+</div>
+
+<p>Every issuer of a euro e-money token publishes a number called "tokens in circulation". The
+reserve has to cover it, the auditor compares it to the bank statements, and the supervisor
+receives it in a template. Ask where the number came from and the honest answer, more often
+than not, is a block explorer screenshot taken by the issuer about the issuer.</p>
+
+<p>That was fine while nobody asked. Two documents now ask. The EBA's reporting instructions
+for MiCA issuers (template S 02.00, "Value of the token issued") want the value at the reference
+date and the <strong>maximum, minimum and average of the values at the end of each calendar
+day</strong> of the period. The AICPA's 2025 stablecoin criteria, which the AICPA is pushing as
+the standard under the US GENIUS Act, want natively minted tokens disclosed <strong>per blockchain
+and per smart contract</strong>, reconciled to the redeemable amount. Both need a figure pinned
+to a moment, from a source that is not the issuer, that someone else can reproduce.</p>
+
+<p>So I built the boring version of that and ran it against every euro e-money token I could
+source a contract for. What follows is what the packs look like, what the runs found, and
+where the approach breaks.</p>
+
+<h2>What a pack contains</h2>
+
+<p>The input is a registry: one entry per deployment, keyed by chain and contract address, with
+the issuer, the decimals and a URL to the issuer's own page that publishes that address. Tickers
+are labels, never identity. This matters more than it sounds: since 26 August 2026 there are two
+unrelated tokens called EURR, one from StablR in Malta and one from Bridge Building S.A. in
+Luxembourg offered through Revolut. A registry keyed by ticker would have silently merged
+them.</p>
+
+<p>A run pins a block, either by number or as the last block at or before a UTC timestamp, and
+reads <code>totalSupply</code> for every contract at that block through at least two RPC
+endpoints run by different operators. The endpoints have to agree. If they do not, the run
+fails and records both answers; it never picks one. Every call is pinned to the block hash rather than the block number, so a reorg makes the
+call fail instead of returning the wrong state.</p>
+
+<p>The output is a directory: <code>result.json</code> and <code>result.csv</code> with the
+figures, <code>inputs.json</code> with the registry subset and the pinned block actually used,
+<code>rpc-log.jsonl</code> with every request and raw response, and <code>MANIFEST.json</code>
+with a SHA-256 per file. The JSON is canonical (sorted keys, no whitespace, integers as decimal
+strings), so the content hash of <code>result.json</code> is stable across machines. The
+manifest can be signed with an Ed25519 key, and a single-file verifier written against the
+standard library only checks the hashes, the canonical form, the arithmetic and the signature,
+then optionally re-reads the chain at the pinned block through an RPC of the verifier's
+choosing and prints <code>identical</code> or a diff.</p>
+
+<div class="diagram"><svg viewBox="0 0 760 210" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" role="img" aria-label="Flow of one evidence run. A registry keyed by chain and contract feeds a pinned block. Three RPC endpoints from different operators read total supply at that block and must agree. The agreed values are written as canonical files with a SHA-256 manifest and an Ed25519 signature. An independent verifier re-derives the pack from its own RPC and prints identical or a diff.">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg2)"/>
+    </marker>
+  </defs>
+  <rect x="8" y="70" width="132" height="70" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="74" y="97" text-anchor="middle" style="fill:var(--fg)">registry</text>
+  <text x="74" y="116" text-anchor="middle" style="fill:var(--fg2)">chain + contract</text>
+  <line x1="140" y1="105" x2="176" y2="105" style="stroke:var(--fg2)" stroke-width="1.5" marker-end="url(#ar)"/>
+  <rect x="178" y="70" width="120" height="70" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="238" y="97" text-anchor="middle" style="fill:var(--fg)">pinned block</text>
+  <text x="238" y="116" text-anchor="middle" style="fill:var(--fg2)">number or UTC time</text>
+  <line x1="298" y1="105" x2="334" y2="105" style="stroke:var(--fg2)" stroke-width="1.5" marker-end="url(#ar)"/>
+  <rect x="336" y="18" width="118" height="42" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="395" y="44" text-anchor="middle" style="fill:var(--fg)">RPC A</text>
+  <rect x="336" y="84" width="118" height="42" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="395" y="110" text-anchor="middle" style="fill:var(--fg)">RPC B</text>
+  <rect x="336" y="150" width="118" height="42" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="395" y="176" text-anchor="middle" style="fill:var(--fg)">RPC C</text>
+  <text x="395" y="8" text-anchor="middle" style="fill:var(--fg2)">must agree</text>
+  <line x1="454" y1="39" x2="490" y2="95" style="stroke:var(--fg2)" stroke-width="1.5"/>
+  <line x1="454" y1="105" x2="490" y2="105" style="stroke:var(--fg2)" stroke-width="1.5"/>
+  <line x1="454" y1="171" x2="490" y2="115" style="stroke:var(--fg2)" stroke-width="1.5"/>
+  <line x1="490" y1="105" x2="504" y2="105" style="stroke:var(--fg2)" stroke-width="1.5" marker-end="url(#ar)"/>
+  <rect x="506" y="62" width="120" height="86" rx="8" style="fill:var(--code);stroke:var(--accent)"/>
+  <text x="566" y="88" text-anchor="middle" style="fill:var(--fg)">canonical files</text>
+  <text x="566" y="107" text-anchor="middle" style="fill:var(--fg2)">SHA-256 manifest</text>
+  <text x="566" y="126" text-anchor="middle" style="fill:var(--fg2)">Ed25519 signature</text>
+  <line x1="626" y1="105" x2="654" y2="105" style="stroke:var(--fg2)" stroke-width="1.5" marker-end="url(#ar)"/>
+  <rect x="656" y="70" width="98" height="70" rx="8" style="fill:var(--code);stroke:var(--border)"/>
+  <text x="705" y="97" text-anchor="middle" style="fill:var(--fg)">verifier</text>
+  <text x="705" y="116" text-anchor="middle" style="fill:var(--fg2)">same or diff</text>
+</svg></div>
+
+<h2>The runs of 13 September</h2>
+
+<p>Eight tokens, nine deployments, three chains, three packs. Ethereum at block 25,969,531
+(15:52:11 UTC, three endpoints agreeing), Base at 51,262,772 and Polygon at 93,739,911 a few
+minutes later, two endpoints each. Each pack was re-derived with the verifier within minutes:
+identical.</p>
+
+<ul>
+  <li>EURC (Circle): 301,722,064.14 on Ethereum and 48,874,867.12 on Base</li>
+  <li>EURCV (Societe Generale-FORGE): 136,859,562.58 on Ethereum</li>
+  <li>EURR (StablR): 17,143,032.56 on Ethereum</li>
+  <li>EUR&Oslash;P (Schuman Financial): 7,743,136.33 on Ethereum</li>
+  <li>EURQ (Quantoz): 6,000,000.00 on Ethereum</li>
+  <li>EUROD (Oddo BHF): 5,100,000.00 on Polygon</li>
+  <li>EURe (Monerium): 2,566,581.02 on Ethereum</li>
+  <li>EURAU (AllUnity): 256,680.64 on Ethereum</li>
+</ul>
+
+<p>These are gross <code>totalSupply</code> figures. Nothing above is presented as "in
+circulation", and the reason is the first finding.</p>
+
+<h2>Finding 1: nobody publishes the exclusions</h2>
+
+<p>Circulating supply is total supply minus whatever the issuer holds in treasury, minter or
+bridge-lock addresses, minus tokens that are blocked or test balances. The AICPA criteria call
+this the minted-versus-redeemable reconciliation. To subtract an address you need the issuer to
+publish it. I read the public pages, white papers and audit reports of Circle, Monerium and
+Schuman looking for such addresses. Token contracts, yes. Blocklist policies, yes. A concrete
+treasury or bridge holder address suitable for exclusion, no. The registry records that as
+pending with the URLs checked rather than guessing, and the packs carry an empty exclusion
+list. If an issuer wants an independent circulating figure, publishing those addresses is the
+one thing only they can do.</p>
+
+<h2>Finding 2: the register is not the market</h2>
+
+<p>The ESMA interim register lists 24 authorised EMT issuers. Reading every issuer's own
+material to find a deployed contract for the euro tokens produced eight admissions and a
+ledger of what stopped the rest. Paxos Issuance Europe's EUROe page now redirects to a
+redemption notice. Newrails' EURW white paper carries a different LEI from the register entry.
+Banking Circle's EURI white paper and audit report describe the product without a mainnet
+address. Bridge's EURR transparency link, as published in the register, returns 404. An active
+row in the register is not evidence of active minting, and a ticker match on an explorer is
+not an issuer source.</p>
+
+<h2>Finding 3: yesterday's evidence has a shelf life on free nodes</h2>
+
+<p>The packs from 13 September verified minutes after they were written. The same verify
+command against packs from the previous evening failed the next morning: the free endpoints
+could not serve state for blocks between twelve and twenty hours old, with errors such as
+"historical state is not available" and "state at block is pruned". A period report over September, one end-of-day
+snapshot per calendar day, came back zero for twelve out of twelve completed days for the same
+reason. The report marks itself incomplete and refuses to treat a missing day as zero, which is
+the right behaviour, but the lesson is operational: reproducing a quarter of end-of-day
+figures needs an archive endpoint, or a job that takes the snapshot minutes after midnight
+while the state still exists. The S 02.00 maximum, minimum and average cannot be computed
+after the fact from public infrastructure.</p>
+
+<h2>What the pack does not prove</h2>
+
+<ul>
+  <li>Anything about reserves. It reads the liability side only.</li>
+  <li>Circulating supply, until exclusions exist with a source.</li>
+  <li>Coverage of chains it does not read. EURC alone is deployed on eight networks; the
+  packs cover two of them.</li>
+  <li>Authorship or date. The signature binds the files to a key. Who holds the key, and an
+  external anchor for the manifest hash, are procedures, not code.</li>
+</ul>
+
+<p>None of this is clever. It is a pinned block, a quorum, a canonical file and a hash, done
+the same way every day so an auditor can stop trusting the screenshot and start re-deriving.
+The interesting work sits on the other side: issuers publishing their exclusion addresses, and
+reporting templates that ask for the end of each calendar day being fed by something that
+actually ran at the end of each calendar day.</p>
+
+<p>The daily <code>totalSupply</code> figures for the Ethereum deployments continue to be
+published on the <a href="/eur-stablecoins/">euro stablecoin supply page</a>. The evidence
+packs behind the runs above, with their manifests and signatures, are available on request.</p>
+
+</article>
+</main>
+
+<footer>
+  <p>Maciej Lewandowski &middot; Senior Blockchain Engineer &middot;
+  <a href="/">maciejlewandowski.dev</a> &middot;
+  <a href="https://www.linkedin.com/in/maciejlewandowsky/">LinkedIn</a> &middot;
+  <a href="https://github.com/NiceLeader">GitHub</a></p>
+</footer>
+
+</div>
+</body>
+</html>

@@ -19,6 +19,19 @@
   },
   "posts": [
     {
+      "slug": "emt-supply-evidence",
+      "title": "Reproducible Supply Evidence for Euro E-Money Tokens",
+      "description": "How to turn a stablecoin supply snapshot into evidence a third party can re-derive: pinned block, RPC quorum, canonical files, signed manifest. Eight euro EMTs, three chains, three findings.",
+      "date": "2026-09-15",
+      "modified": "2026-09-15",
+      "track": "Custody engineering",
+      "status": "published",
+      "related": [
+        "point-in-time-balances",
+        "deposit-detection"
+      ]
+    },
+    {
       "slug": "rust-money-types",
       "title": "Money in Rust: Making Illegal States Unrepresentable",
       "description": "Newtypes, phantom-typed currencies, checked arithmetic and typestate - how much of a financial bug class the compiler can take off your hands, for zero bytes.",
