@@ -1,0 +1,9 @@
+{
+  "vaults": [
+    { "id": "gtSkyLooping", "name": "Gauntlet Sky Looping (Yield+ core)", "operator": "Gauntlet, Aera V3 vault", "kind": "leveraged sUSDS on two Morpho Blue markets, numeraire USDS" },
+    { "id": "goUSDC", "name": "Yield+ USDC feeder", "operator": "Gauntlet, Aera V3 vault", "kind": "feeder into gtSkyLooping, numeraire USDC" },
+    { "id": "goUSDT", "name": "Yield+ USDT feeder", "operator": "Gauntlet, Aera V3 vault", "kind": "feeder into gtSkyLooping, numeraire USDT" },
+    { "id": "glPRIME", "name": "Gauntlet PRIME", "operator": "Gauntlet, Aera V3 vault", "kind": "PRIME collateral, USDC debt on Morpho Blue, numeraire USDC" },
+    { "id": "gtUSDhy", "name": "Gauntlet USD high yield", "operator": "Gauntlet, Aera V3 vault", "kind": "fund of vaults, numeraire USDC" }
+  ]
+}

@@ -568,12 +568,25 @@ export async function buildSite({ rootDir, outputDir }) {
     }
     extraPages.push({ path: "/eur-stablecoins/", lastModified: supplyDate, priority: "0.8", frequency: "daily" });
   }
+  if (await pathExists(path.join(rootDir, "vault-nav", "index.html"))) {
+    let navDate = manifest.site.pageDates?.home ?? "1970-01-01";
+    try {
+      const latestNav = JSON.parse(await readFile(path.join(rootDir, "content", "vault-nav", "latest.json"), "utf8"));
+      navDate = Object.values(latestNav.vaults).map((v) => v.date).sort().pop() ?? navDate;
+    } catch {
+      // keep fallback date
+    }
+    extraPages.push({ path: "/vault-nav/", lastModified: navDate, priority: "0.8", frequency: "daily" });
+  }
   await writeFile(path.join(outputDir, "sitemap.xml"), renderSitemap(manifest, publishedPosts, extraPages), "utf8");
   await writeFile(path.join(outputDir, ".nojekyll"), "", "utf8");
 
   await copyDirectory(path.join(rootDir, "services"), path.join(outputDir, "services"));
   if (await pathExists(path.join(rootDir, "eur-stablecoins", "index.html"))) {
     await copyDirectory(path.join(rootDir, "eur-stablecoins"), path.join(outputDir, "eur-stablecoins"));
+  }
+  if (await pathExists(path.join(rootDir, "vault-nav", "index.html"))) {
+    await copyDirectory(path.join(rootDir, "vault-nav"), path.join(outputDir, "vault-nav"));
   }
   if (await pathExists(path.join(rootDir, "assets"))) {
     await copyDirectory(path.join(rootDir, "assets"), path.join(outputDir, "assets"));
