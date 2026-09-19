@@ -13,6 +13,7 @@ const BLOG_POSTS_END = "<!-- BLOG_POSTS_END -->";
 const STATIC_FILES = [
   "404.html",
   "robots.txt",
+  "llms.txt",
   "og.png",
   "favicon.svg",
   "favicon-32x32.png",

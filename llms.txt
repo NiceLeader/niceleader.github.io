@@ -1,0 +1,22 @@
+# Maciej Lewandowski
+
+> Senior blockchain and AI engineer (Poland, remote). Digital-asset custody, key management and stablecoin infrastructure for regulated institutions; independent on-chain evidence tools; agentic engineering in regulated codebases. Site content is factual and dated: on-chain figures are read at stated blocks, issuer statements are quoted verbatim, and pages say what they do not show.
+
+## Data pages (updated daily)
+
+- [Euro stablecoin supply](https://maciejlewandowski.dev/eur-stablecoins/): on-chain totalSupply of euro e-money tokens on Ethereum (EURC, EURCV, EURR, EURQ, EURAU, EURe) at a stated block, next to each issuer's own reserve statement quoted word for word. Facts only, no ratios, no verdicts.
+- [Vault NAV check](https://maciejlewandowski.dev/vault-nav/): daily independent recomputation of the price per share of curated DeFi vaults (Gauntlet vaults used by Sky Yield+) from chain state at a pinned block, next to the price each vault reports, with the gap in basis points and CSV downloads. Reads chain state only; says nothing about solvency or strategy quality.
+
+## Writing
+
+- [Blog index](https://maciejlewandowski.dev/blog/): custody engineering, stablecoin and tokenized-deposit infrastructure, Bitcoin UTXO handling, point-in-time balances, deposit detection, AI agents in production and in regulated code (DORA, MiCA).
+- [Services](https://maciejlewandowski.dev/services/): what I take on as a contractor.
+
+## Code
+
+- [GitHub](https://github.com/NiceLeader): open-source Rust tools, including an OpenID4VP 1.0 verifier and headless wallet exercised against the OpenID Foundation conformance suite.
+
+## Contact
+
+- contact@maciejlewandowski.dev
+- [LinkedIn](https://www.linkedin.com/in/maciejlewandowsky/)
